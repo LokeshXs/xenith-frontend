@@ -55,7 +55,7 @@ export function ScheduleStep() {
   };
 
   return (
-    <div className="flex flex-col gap-6 min-w-[500px]">
+    <div className="flex flex-col gap-6 w-full">
       {/* Header */}
       <div className="flex flex-col gap-2">
         <h2 className="text-3xl font-bold tracking-tight">

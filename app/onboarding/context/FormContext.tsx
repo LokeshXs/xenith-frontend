@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import type { OnboardingStatusSteps } from '@/lib/services/onboarding-status';
 
 /**
  * Generic form data type that can be extended for specific forms
@@ -27,6 +28,11 @@ export interface FormContextType {
   totalSteps: number;
   currentStepId: string;
   steps: FormStep[];
+
+  // Onboarding-status snapshot from the server. Steps can branch their UI on this
+  // (e.g. ConnectXStep renders the "analyze posts" variant when xAccount is true
+  // but styleProfile is false).
+  statusSteps?: OnboardingStatusSteps;
 
   // Form data management
   formData: FormData;
@@ -56,12 +62,16 @@ export function FormProvider({
   children,
   steps,
   initialData = {},
+  initialStep = 0,
+  statusSteps,
 }: {
   children: ReactNode;
   steps: FormStep[];
   initialData?: FormData;
+  initialStep?: number;
+  statusSteps?: OnboardingStatusSteps;
 }) {
-  const [currentStep, setCurrentStep] = useState(0);
+  const [currentStep, setCurrentStep] = useState(initialStep);
   const [formData, setFormData] = useState<FormData>(initialData);
   const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
 
@@ -96,7 +106,7 @@ export function FormProvider({
   };
 
   const goToPreviousStep = () => {
-    if (currentStep > 0) {
+    if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
@@ -108,7 +118,7 @@ export function FormProvider({
   };
 
   const canGoNext = () => currentStep < totalSteps - 1;
-  const canGoPrevious = () => currentStep > 0;
+  const canGoPrevious = () => currentStep > 1;
 
   /**
    * Mark a step as completed
@@ -126,7 +136,7 @@ export function FormProvider({
    * Reset the entire form
    */
   const resetForm = () => {
-    setCurrentStep(0);
+    setCurrentStep(initialStep);
     setFormData(initialData);
     setCompletedSteps(new Set());
   };
@@ -136,6 +146,7 @@ export function FormProvider({
     totalSteps,
     currentStepId,
     steps,
+    statusSteps,
     formData,
     updateFormData,
     getStepData,
