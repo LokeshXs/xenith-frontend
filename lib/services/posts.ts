@@ -33,6 +33,16 @@ export type PostsTodayResult =
   | { kind: 'unauthorized' }
   | { kind: 'error' }
 
+export interface PostsListResponse {
+  // Ordered by generated_at descending; [] when nothing has been generated.
+  posts: GeneratedPost[]
+}
+
+export type PostsListResult =
+  | { kind: 'ok'; data: PostsListResponse }
+  | { kind: 'unauthorized' }
+  | { kind: 'error' }
+
 // Server-side fetch of GET /api/v1/posts/today. Takes the Supabase JWT explicitly
 // (mirrors fetchOnboardingStatus) so it can run in a Server Component without the
 // client-only axios apiClient.
@@ -50,6 +60,35 @@ export async function fetchPostsToday(
     if (res.status === 401) return { kind: 'unauthorized' }
     if (!res.ok) return { kind: 'error' }
     const data = (await res.json()) as PostsTodayResponse
+    return { kind: 'ok', data }
+  } catch {
+    return { kind: 'error' }
+  }
+}
+
+// Server-side fetch of GET /api/v1/posts (full history, newest first). Mirrors
+// fetchPostsToday: takes the Supabase JWT explicitly so it can run in a Server
+// Component without the client-only axios apiClient. There's no cursor
+// pagination — limit is clamped server-side to 1–100.
+export async function fetchPosts(
+  accessToken: string,
+  opts?: { limit?: number; runId?: string },
+): Promise<PostsListResult> {
+  try {
+    const params = new URLSearchParams()
+    params.set('limit', String(opts?.limit ?? 100))
+    if (opts?.runId) params.set('runId', opts.runId)
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/posts?${params.toString()}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        cache: 'no-store',
+      },
+    )
+    if (res.status === 401) return { kind: 'unauthorized' }
+    if (!res.ok) return { kind: 'error' }
+    const data = (await res.json()) as PostsListResponse
     return { kind: 'ok', data }
   } catch {
     return { kind: 'error' }
