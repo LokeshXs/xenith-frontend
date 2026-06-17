@@ -50,6 +50,7 @@ export default async function Page() {
       <DashboardClient
         initialPosts={result.data.posts}
         timezone={result.data.timezone}
+        deliveryTime={result.data.deliveryTime}
         xAccount={result.data.xAccount}
       />
     </Suspense>

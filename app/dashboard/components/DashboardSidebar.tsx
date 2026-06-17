@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, useReducedMotion } from 'motion/react'
 import {
+  ContactIcon,
   LayoutGridIcon,
   LayoutListIcon,
   ReplyIcon,
@@ -56,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'All posts', href: '/dashboard/posts', icon: LayoutListIcon },
   { title: 'Suggested Replies', href: '/dashboard/suggested-replies', icon: ReplyIcon },
   { title: 'Settings', href: '/dashboard/settings', icon: SettingsIcon },
+  { title: 'Contact Support', href: '/dashboard/contact-support', icon: ContactIcon },
 ]
 
 function isActive(pathname: string, href: string): boolean {

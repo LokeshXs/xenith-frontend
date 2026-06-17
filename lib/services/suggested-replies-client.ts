@@ -1,19 +1,35 @@
 import { apiClient } from '../api'
 import type {
+  SuggestedRepliesHistoryResponse,
   SuggestedRepliesResponse,
   SuggestedReply,
 } from './suggested-replies'
 
-// GET /api/v1/suggested-replies/generate — on-demand, called on view-open.
-// Serves a cached batch within the freshness window (~20 min) unless force is
-// set, so it's cheap to call every time the view opens. When force=true it
-// bypasses the cache and regenerates now (the manual refresh button).
+// POST /api/v1/suggested-replies/generate — regenerates a fresh batch on demand
+// (the replies-view Refresh and the dashboard's "Generate suggested replies"
+// action). Always regenerates; slow (calls the AI + X API). Pass mode='agent'
+// to force agent-mode generation (A/B testing).
 export async function generateSuggestedReplies(
-  force = false,
+  opts?: { mode?: 'agent' },
 ): Promise<SuggestedRepliesResponse> {
-  const { data } = await apiClient.get<SuggestedRepliesResponse>(
+  const { data } = await apiClient.post<SuggestedRepliesResponse>(
     '/suggested-replies/generate',
-    force ? { params: { force: true } } : undefined,
+    undefined,
+    opts?.mode ? { params: { mode: opts.mode } } : undefined,
+  )
+  return data
+}
+
+// GET /api/v1/suggested-replies — read-only reply history, grouped by calendar
+// day (newest first) and paginated by day. Never generates; safe to call on
+// mount and on scroll. `limit` is days per page (default 7, max 30).
+export async function fetchSuggestedRepliesHistory(
+  page = 1,
+  limit = 7,
+): Promise<SuggestedRepliesHistoryResponse> {
+  const { data } = await apiClient.get<SuggestedRepliesHistoryResponse>(
+    '/suggested-replies',
+    { params: { page, limit } },
   )
   return data
 }

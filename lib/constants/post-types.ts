@@ -4,6 +4,7 @@ export const BASE_POST_TYPES = [
   'Motivational',
   'Educational',
   'Opinion',
+  'news',
   'Personal Story',
   'How-To',
   'Question',

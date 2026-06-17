@@ -1,121 +1,95 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { IconLoader2, IconRefresh } from '@tabler/icons-react'
-import { toast } from 'sonner'
+import Link from 'next/link'
+import {
+  IconArrowRight,
+  IconLoader2,
+  IconRefresh,
+  IconSparkles,
+} from '@tabler/icons-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/app/onboarding/utils/getErrorMessage'
-import type { XAccount } from '@/lib/services/posts'
-import type { SuggestedReply } from '@/lib/services/suggested-replies'
-import { generateSuggestedReplies } from '@/lib/services/suggested-replies-client'
+import type {
+  SuggestedReply,
+  SuggestedRepliesHistoryResponse,
+} from '@/lib/services/suggested-replies'
+import {
+  fetchSuggestedRepliesHistory,
+  generateSuggestedReplies,
+} from '@/lib/services/suggested-replies-client'
+import { patchReplyInHistory } from '@/lib/services/suggested-replies-cache'
+import { formatDayLabel, todayKeyInTimezone } from '@/lib/utils/day-label'
 import { SuggestedReplyCard } from './SuggestedReplyCard'
 
-type Status = 'loading' | 'ready' | 'error'
+// Page 1 of the day-grouped history. The main view shows only the newest day.
+const LATEST_QUERY_KEY = ['suggested-replies', 'history', 1] as const
 
 export function SuggestedRepliesList() {
-  const [status, setStatus] = useState<Status>('loading')
-  const [errorMessage, setErrorMessage] = useState<string | null>(null)
-  const [replies, setReplies] = useState<SuggestedReply[]>([])
-  const [xAccount, setXAccount] = useState<XAccount | null>(null)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const queryClient = useQueryClient()
 
-  // Load replies. force=false serves a cached batch when fresh (cheap to call
-  // on every view-open); force=true bypasses the cache to regenerate now.
-  const load = useCallback(async (force: boolean) => {
-    try {
-      const data = await generateSuggestedReplies(force)
-      // A refresh replaces the view with the latest run — earlier suggestions
-      // are dropped by the API (they were never published, just suggestions).
-      setReplies(data.replies)
-      setXAccount(data.xAccount)
-      setStatus('ready')
-      setErrorMessage(null)
-      return data
-    } catch (error) {
-      // 401 is handled globally by the apiClient interceptor.
-      console.error('Failed to load suggested replies:', error)
-      // Keep an already-loaded list visible on a failed refresh; only show the
-      // error screen when the initial load fails.
-      setStatus((prev) => (prev === 'ready' ? 'ready' : 'error'))
-      setErrorMessage(
-        getErrorMessage(
-          error,
-          'Something went wrong loading your suggested replies. Please try again.',
-        ),
-      )
-      throw error
-    }
-  }, [])
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: LATEST_QUERY_KEY,
+    queryFn: () => fetchSuggestedRepliesHistory(1),
+  })
 
-  // Fetch on view-open. Cheap when the API serves a cached batch.
-  useEffect(() => {
-    let cancelled = false
-    generateSuggestedReplies(false)
-      .then((data) => {
-        if (cancelled) return
-        setReplies(data.replies)
-        setXAccount(data.xAccount)
-        setStatus('ready')
-      })
-      .catch((error) => {
-        if (cancelled) return
-        // 401 is handled globally by the apiClient interceptor.
-        console.error('Failed to load suggested replies:', error)
-        setErrorMessage(
-          getErrorMessage(
-            error,
-            'Something went wrong loading your suggested replies. Please try again.',
-          ),
-        )
-        setStatus('error')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  const handleRefresh = async () => {
-    if (isRefreshing) return
-    setIsRefreshing(true)
-    try {
-      const data = await load(true)
-      if (data.replies.length === 0) {
-        toast.success('No replies found — try again later')
-      } else if (data.generated) {
-        toast.success(
-          `Generated ${data.replies.length} ${
-            data.replies.length === 1 ? 'reply' : 'replies'
-          }`,
-        )
-      } else {
-        toast.success('Replies are up to date')
-      }
-    } catch {
-      // Already surfaced by load(); on an existing list, keep it and toast.
-      toast.error('Failed to refresh replies')
-    } finally {
-      setIsRefreshing(false)
-    }
-  }
+  // Show only the latest date batch; older days live on the "Show all" page.
+  const latest = data?.groups[0]
+  const replies = latest?.replies ?? []
+  const xAccount = data?.xAccount ?? null
 
   const handleUpdated = (updated: SuggestedReply) => {
-    setReplies((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+    queryClient.setQueryData(LATEST_QUERY_KEY, (prev: typeof data) =>
+      patchReplyInHistory(prev, updated),
+    )
   }
+
+  // Refresh regenerates a fresh batch (slow: AI + X API). On success we write the
+  // new batch into the history cache as today's group, so the view — which reads
+  // from the query — and edit/publish patching stay on one source of truth.
+  const generate = useMutation({
+    mutationFn: () => generateSuggestedReplies(),
+    onSuccess: (res) => {
+      const todayKey = todayKeyInTimezone(res.timezone)
+      queryClient.setQueryData(
+        LATEST_QUERY_KEY,
+        (prev: SuggestedRepliesHistoryResponse | undefined) => {
+          const rest = prev?.groups.filter((g) => g.date !== todayKey) ?? []
+          return {
+            timezone: res.timezone,
+            xAccount: res.xAccount,
+            groups: [{ date: todayKey, replies: res.replies }, ...rest],
+            pagination: prev?.pagination ?? {
+              page: 1,
+              limit: 7,
+              totalDays: rest.length + 1,
+              hasMore: false,
+            },
+          }
+        },
+      )
+    },
+  })
+
+  // The dashed empty state owns its own Generate button, so the header Refresh
+  // is hidden there to avoid two competing triggers.
+  const isEmpty =
+    !generate.isPending && !generate.isError && !(latest && replies.length > 0)
 
   const refreshButton = (
     <Button
       size="sm"
       variant="outline"
-      onClick={handleRefresh}
-      disabled={isRefreshing}
+      onClick={() => generate.mutate()}
+      disabled={generate.isPending}
       className="self-start sm:self-auto"
     >
-      {isRefreshing ? (
+      {generate.isPending ? (
         <>
           <IconLoader2 className="size-4 animate-spin" />
-          Refreshing…
+          Generating…
         </>
       ) : (
         <>
@@ -126,7 +100,21 @@ export function SuggestedRepliesList() {
     </Button>
   )
 
-  if (status === 'loading') {
+  const showAllButton = (
+    <Link
+      href="/dashboard/suggested-replies/all"
+      className={buttonVariants({
+        variant: 'ghost',
+        size: 'sm',
+        className: 'self-start sm:self-auto',
+      })}
+    >
+      Show all
+      <IconArrowRight className="size-4" />
+    </Link>
+  )
+
+  if (isLoading) {
     return (
       <div className="flex flex-col gap-6">
         <header className="flex items-center gap-3">
@@ -143,22 +131,16 @@ export function SuggestedRepliesList() {
     )
   }
 
-  if (status === 'error') {
+  if (isError) {
     return (
       <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-8 text-center">
         <p className="text-sm text-destructive">
-          {errorMessage ??
-            'Something went wrong loading your suggested replies. Please try again.'}
+          {getErrorMessage(
+            error,
+            'Something went wrong loading your suggested replies. Please try again.',
+          )}
         </p>
-        <Button
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            // load() surfaces failures via its own error state; swallow the
-            // rejection here so it doesn't bubble as an unhandled rejection.
-            load(false).catch(() => {})
-          }}
-        >
+        <Button size="sm" variant="outline" onClick={() => refetch()}>
           <IconRefresh className="size-4" />
           Try again
         </Button>
@@ -179,30 +161,65 @@ export function SuggestedRepliesList() {
             </span>
           )}
         </div>
-        {refreshButton}
+        <div className="flex items-center gap-2">
+          {showAllButton}
+          {!isEmpty && refreshButton}
+        </div>
       </header>
 
-      {replies.length > 0 ? (
+      {generate.isPending ? (
+        // Regeneration is slow — replace the replies with skeletons meanwhile.
         <div className="flex flex-col gap-4">
-          {replies.map((reply, index) => (
-            <div
-              key={reply.id}
-              className="animate-in fade-in-0 fill-mode-both duration-300 ease-out motion-safe:slide-in-from-bottom-1"
-              style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
-            >
-              <SuggestedReplyCard
-                reply={reply}
-                xAccount={xAccount}
-                onUpdated={handleUpdated}
-              />
-            </div>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 w-full" />
           ))}
         </div>
-      ) : (
+      ) : generate.isError ? (
+        // A failed regeneration replaces the replies with the server's message
+        // (402 upgrade prompt / 4xx pipeline error / generic) plus a retry.
         <div className="flex flex-col items-center gap-4 rounded-lg border border-dashed p-8 text-center">
-          <p className="text-muted-foreground text-sm">
-            No suggested replies yet today — runs land throughout the day, or
-            refresh to generate a batch now.
+          <p className="text-sm text-destructive">
+            {getErrorMessage(
+              generate.error,
+              'Failed to generate replies. Please try again.',
+            )}
+          </p>
+          <Button size="sm" variant="outline" onClick={() => generate.mutate()}>
+            <IconRefresh className="size-4" />
+            Try again
+          </Button>
+        </div>
+      ) : latest && replies.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+            {formatDayLabel(latest.date, data!.timezone)}
+          </h2>
+          <div className="flex flex-col gap-4">
+            {replies.map((reply, index) => (
+              <div
+                key={reply.id}
+                className="animate-in fade-in-0 fill-mode-both duration-300 ease-out motion-safe:slide-in-from-bottom-1"
+                style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+              >
+                <SuggestedReplyCard
+                  reply={reply}
+                  xAccount={xAccount}
+                  onUpdated={handleUpdated}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
+          <Button onClick={() => generate.mutate()}>
+            <IconSparkles className="size-4" />
+            Generate replies
+          </Button>
+          <p className="text-muted-foreground text-sm max-w-sm text-balance">
+            No suggested replies yet. Generate a batch and we&rsquo;ll surface
+            fresh posts from your niche with replies drafted in your voice —
+            ready to review, tweak, and post in seconds.
           </p>
         </div>
       )}

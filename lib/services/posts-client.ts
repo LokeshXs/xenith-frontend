@@ -1,5 +1,12 @@
 import { apiClient } from '../api'
-import type { GeneratedPost } from './posts'
+import type { GeneratedPost, PostsTodayResponse } from './posts'
+
+// GET /api/v1/posts/today — today's posts (auto or manual). Client-side
+// counterpart to the server `fetchPostsToday`, used to reload after a 409.
+export async function fetchPostsTodayClient(): Promise<PostsTodayResponse> {
+  const { data } = await apiClient.get<PostsTodayResponse>('/posts/today')
+  return data
+}
 
 export interface UpdatePostInput {
   // Send one or both; at least one is required by the backend.

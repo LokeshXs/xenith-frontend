@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemedToaster } from "@/components/themed-toaster";
+import { QueryProvider } from "@/components/query-provider";
 
 const outfit = Outfit({subsets:['latin'],variable:'--font-sans'});
 
@@ -56,7 +57,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>{children}</AuthProvider>
+          <QueryProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryProvider>
           <ThemedToaster />
         </ThemeProvider>
       </body>

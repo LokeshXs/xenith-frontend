@@ -6,10 +6,12 @@ import { isAxiosError } from 'axios'
 import { IconX } from '@tabler/icons-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { formatTime12 } from '@/components/ui/time-picker'
 import { apiClient } from '@/lib/api'
 import type { GeneratedPost, XAccount } from '@/lib/services/posts'
-import { generateSuggestedReplies } from '@/lib/services/suggested-replies-client'
+import { fetchPostsTodayClient } from '@/lib/services/posts-client'
 import { PostCard } from './PostCard'
+import { PostCardSkeleton } from './PostCardSkeleton'
 
 const ERROR_REASON_MAP: Record<string, string> = {
   access_denied: 'You declined to authorize the X connection.',
@@ -18,20 +20,18 @@ const ERROR_REASON_MAP: Record<string, string> = {
   token_exchange_failed: 'Failed to connect your X account. Please try again.',
 }
 
-async function generatePosts() {
-  const { data } = await apiClient.get('/posts/generate')
-  console.log(data)
-}
-
 type DashboardClientProps = {
   initialPosts: GeneratedPost[]
   timezone: string
+  // User's daily delivery time as "HH:MM" (24h) in `timezone`.
+  deliveryTime: string
   xAccount: XAccount | null
 }
 
 export function DashboardClient({
   initialPosts,
   timezone,
+  deliveryTime,
   xAccount,
 }: DashboardClientProps) {
   const searchParams = useSearchParams()
@@ -39,25 +39,45 @@ export function DashboardClient({
   const reasonParam = searchParams.get('reason')
 
   const [bannerDismissed, setBannerDismissed] = useState(false)
-  const [isGeneratingReplies, setIsGeneratingReplies] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
   const [sortBy, setSortBy] = useState<'newest' | 'engagement'>('newest')
+
+  // Today's posts as local state so a manual generation run can replace the list
+  // in place without a full page refetch.
+  const [posts, setPosts] = useState(initialPosts)
+
+  // Whether the user's local time is at/past their delivery time. When true and
+  // there are no posts, the automatic pipeline likely failed and we offer a
+  // manual trigger; when false, the posts simply aren't due yet. Computed once
+  // at mount — landing on the page already triggers a fresh server fetch.
+  const isPastDelivery = useMemo(() => {
+    if (!deliveryTime) return false
+    const now = new Intl.DateTimeFormat('en-GB', {
+      timeZone: timezone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(new Date())
+    // Both are zero-padded "HH:MM", so lexical compare matches chronological.
+    return now >= deliveryTime
+  }, [timezone, deliveryTime])
 
   // The id of the highest-scoring post in today's batch — surfaced as a "Top
   // pick" marker. Advisory only; null when nothing was scored.
   const topPickId = useMemo(() => {
     let best: GeneratedPost | null = null
-    for (const post of initialPosts) {
+    for (const post of posts) {
       if (post.engagement_score === null) continue
       if (!best || post.engagement_score > best.engagement_score!) best = post
     }
     return best?.id ?? null
-  }, [initialPosts])
+  }, [posts])
 
   // Default order is newest-first (server order). "Sort by engagement" pushes
   // scored posts up by score and unscored (null) posts to the bottom.
   const displayPosts = useMemo(() => {
-    if (sortBy === 'newest') return initialPosts
-    return [...initialPosts].sort((a, b) => {
+    if (sortBy === 'newest') return posts
+    return [...posts].sort((a, b) => {
       const sa = a.engagement_score
       const sb = b.engagement_score
       if (sa === null && sb === null) return 0
@@ -65,20 +85,20 @@ export function DashboardClient({
       if (sb === null) return -1
       return sb - sa
     })
-  }, [initialPosts, sortBy])
+  }, [posts, sortBy])
 
-  const anyScored = initialPosts.some((p) => p.engagement_score !== null)
+  const anyScored = posts.some((p) => p.engagement_score !== null)
 
-  async function handleGenerateReplies() {
-    setIsGeneratingReplies(true)
+  async function handleGenerate() {
+    setIsGenerating(true)
     try {
-      const { replies } = await generateSuggestedReplies()
-      if (replies.length === 0) {
-        toast.success('No suggested replies generated')
-      } else {
-        toast.success(
-          `${replies.length} suggested ${replies.length === 1 ? 'reply' : 'replies'} generated`,
-        )
+      // POST /posts/generate is synchronous and slow — it runs the whole
+      // pipeline. Capped to one run per day (shared with the auto run).
+      const { data } = await apiClient.post('/posts/generate')
+      const generated = (data?.posts ?? []) as GeneratedPost[]
+      setPosts(generated)
+      if (generated.length === 0) {
+        toast.error('No posts were generated. Please try again.')
       }
     } catch (err) {
       // 401 is handled globally by the apiClient interceptor (signout + redirect).
@@ -86,13 +106,27 @@ export function DashboardClient({
       const apiMessage = isAxiosError(err)
         ? (err.response?.data?.error as string | undefined)
         : undefined
-      if ((status === 400 || status === 402) && apiMessage) {
+
+      if (status === 409) {
+        // Already generated today (auto or manual) — not an error. Load today's
+        // posts and surface them.
+        try {
+          const today = await fetchPostsTodayClient()
+          setPosts(today.posts)
+          toast.info('Posts have already been generated today.')
+        } catch {
+          toast.error('Failed to load today’s posts. Please refresh.')
+        }
+      } else if (
+        (status === 400 || status === 402 || status === 500) &&
+        apiMessage
+      ) {
         toast.error(apiMessage)
       } else {
-        toast.error('Failed to generate suggested replies. Please try again.')
+        toast.error('Failed to generate posts. Please try again.')
       }
     } finally {
-      setIsGeneratingReplies(false)
+      setIsGenerating(false)
     }
   }
 
@@ -136,7 +170,7 @@ export function DashboardClient({
             Today&rsquo;s posts
           </h1>
 
-          {initialPosts.length > 1 && anyScored && (
+          {posts.length > 1 && anyScored && (
             <div className="inline-flex items-center rounded-lg border p-0.5 text-xs">
               <button
                 type="button"
@@ -166,7 +200,7 @@ export function DashboardClient({
           )}
         </div>
 
-        {initialPosts.length > 0 ? (
+        {posts.length > 0 ? (
           <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 [column-fill:_balance]">
             {displayPosts.map((post) => (
               <PostCard
@@ -177,30 +211,47 @@ export function DashboardClient({
               />
             ))}
           </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">
-            {/* TODO: show delivery time from preferences API — "your posts will be ready at <time>" */}
+        ) : isGenerating ? (
+          // Skeleton grid covers the (synchronous) pipeline run until the real
+          // cards arrive.
+          <div
+            role="status"
+            aria-live="polite"
+            className="columns-1 gap-4 sm:columns-2 xl:columns-3 [column-fill:_balance]"
+          >
+            {Array.from({ length: 4 }).map((_, i) => (
+              <PostCardSkeleton key={i} />
+            ))}
+            <span className="sr-only">Generating your posts…</span>
+          </div>
+        ) : isPastDelivery ? (
+          // Past delivery time with nothing generated → the automatic pipeline
+          // likely failed. Offer a manual re-run.
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
             <p className="text-muted-foreground text-sm">
-              No posts yet today — your posts will be ready soon.
+              We couldn&rsquo;t generate today&rsquo;s posts automatically.
+              You can generate them now.
+            </p>
+            <Button onClick={handleGenerate} disabled={isGenerating}>
+              Generate now
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
+            <p className="text-muted-foreground text-sm">
+              {deliveryTime
+                ? `Your posts will be ready at ${formatTime12(deliveryTime)}.`
+                : 'No posts yet today — your posts will be ready soon.'}
             </p>
             <p className="text-muted-foreground text-xs">Timezone: {timezone}</p>
+            <Button onClick={handleGenerate} disabled={isGenerating}>
+              Generate Now
+            </Button>
           </div>
         )}
       </section>
 
-      <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-center">
-        <Button className="w-full sm:w-auto" onClick={() => generatePosts()}>
-          Generate
-        </Button>
-        <Button
-          variant="outline"
-          className="w-full sm:w-auto"
-          onClick={handleGenerateReplies}
-          disabled={isGeneratingReplies}
-        >
-          {isGeneratingReplies ? 'Generating…' : 'Generate suggested replies'}
-        </Button>
-      </div>
+    
     </div>
   )
 }

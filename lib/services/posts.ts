@@ -30,6 +30,8 @@ export interface XAccount {
 export interface PostsTodayResponse {
   // IANA tz used to compute "today" (Preferences.timezone, defaults "UTC")
   timezone: string
+  // User's daily delivery time as "HH:MM" (24h) in `timezone`.
+  deliveryTime: string
   // Ordered by generated_at descending; [] when nothing was generated today.
   posts: GeneratedPost[]
   // The connected X account these posts belong to; null if not connected.

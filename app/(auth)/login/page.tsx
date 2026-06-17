@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { z } from 'zod'
@@ -22,6 +22,16 @@ type LoginFields = z.infer<typeof loginSchema>
 type FieldErrors = Partial<Record<keyof LoginFields, string>>
 
 export default function LoginPage() {
+  // useSearchParams() (read inside LoginForm) opts the route into client-side
+  // rendering, so Next requires a Suspense boundary around it for the build.
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
+  )
+}
+
+function LoginForm() {
   useAuthGuard({ redirectIfAuthenticated: '/onboarding' })
 
   const router = useRouter()

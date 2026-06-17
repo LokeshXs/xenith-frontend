@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { fetchPosts, fetchPostsToday } from '@/lib/services/posts'
 import type { GeneratedPost, XAccount } from '@/lib/services/posts'
+import { formatDayLabel } from '@/lib/utils/day-label'
 import { PostCard } from '../components/PostCard'
 
 type PostGroup = { key: string; label: string; posts: GeneratedPost[] }
@@ -17,39 +18,11 @@ function dayKeyInTimezone(value: string, timeZone: string): string {
   }).format(new Date(value))
 }
 
-// "Today" / "Yesterday" / "May 28" / "May 28, 2024" relative to now in tz.
-function labelForDayKey(
-  dayKey: string,
-  timeZone: string,
-  todayKey: string,
-  yesterdayKey: string,
-  currentYear: string,
-): string {
-  if (dayKey === todayKey) return 'Today'
-  if (dayKey === yesterdayKey) return 'Yesterday'
-
-  // dayKey is YYYY-MM-DD — parse as a plain date (noon UTC avoids tz edge cases).
-  const date = new Date(`${dayKey}T12:00:00Z`)
-  const sameYear = dayKey.slice(0, 4) === currentYear
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone,
-    month: 'short',
-    day: 'numeric',
-    ...(sameYear ? {} : { year: 'numeric' }),
-  }).format(date)
-}
-
 // Group posts (already sorted newest-first) by local calendar day.
 function groupPostsByDay(
   posts: GeneratedPost[],
   timeZone: string,
 ): PostGroup[] {
-  const now = new Date()
-  const todayKey = dayKeyInTimezone(now.toISOString(), timeZone)
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
-  const yesterdayKey = dayKeyInTimezone(yesterday.toISOString(), timeZone)
-  const currentYear = todayKey.slice(0, 4)
-
   const groups: PostGroup[] = []
   const byKey = new Map<string, PostGroup>()
 
@@ -57,17 +30,7 @@ function groupPostsByDay(
     const key = dayKeyInTimezone(post.generated_at, timeZone)
     let group = byKey.get(key)
     if (!group) {
-      group = {
-        key,
-        label: labelForDayKey(
-          key,
-          timeZone,
-          todayKey,
-          yesterdayKey,
-          currentYear,
-        ),
-        posts: [],
-      }
+      group = { key, label: formatDayLabel(key, timeZone), posts: [] }
       byKey.set(key, group)
       groups.push(group)
     }

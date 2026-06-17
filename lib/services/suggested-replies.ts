@@ -39,13 +39,36 @@ export interface SuggestedReply {
   updated_at: string
 }
 
+// Response of GET /api/v1/suggested-replies/generate — used by the dashboard's
+// "Generate suggested replies" action to produce a fresh batch on demand.
 export interface SuggestedRepliesResponse {
   // IANA tz used for the day boundary (Preferences.timezone, defaults "UTC")
   timezone: string
-  // Today's replies, flat. Newest run first; best match first within a run.
+  // The newly generated batch, flat. Newest run first; [] if nothing produced.
   replies: SuggestedReply[]
   // The connected X account to reply as; null if not connected.
   xAccount: XAccount | null
-  // Whether the API actually regenerated (true) or served a cached batch (false).
-  generated: boolean
+}
+
+// One calendar day's worth of replies (newest day first across groups).
+export interface SuggestedReplyGroup {
+  date: string // YYYY-MM-DD in the user's timezone
+  replies: SuggestedReply[] // newest first within the day
+}
+
+// GET /api/v1/suggested-replies — read-only history, grouped by day, paginated.
+export interface SuggestedRepliesHistoryResponse {
+  // IANA tz the day boundaries are computed in (Preferences.timezone, "UTC").
+  timezone: string
+  // The connected X account to reply as; null if not connected.
+  xAccount: XAccount | null
+  // Newest day first; [] when there's no history. A day is never split across
+  // pages, so groups from consecutive pages can be concatenated safely.
+  groups: SuggestedReplyGroup[]
+  pagination: {
+    page: number
+    limit: number
+    totalDays: number
+    hasMore: boolean
+  }
 }
