@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
@@ -6,6 +7,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import { ThemeProvider } from "@/components/theme-provider";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { QueryProvider } from "@/components/query-provider";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const outfit = Outfit({subsets:['latin'],variable:'--font-sans'});
 
@@ -50,6 +52,13 @@ export default function RootLayout({
       suppressHydrationWarning
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", outfit.variable)}
     >
+      <head>
+        <Script
+          defer
+          src="https://cloud.umami.is/script.js"
+          data-website-id="8defa46b-0d1b-47b5-894a-569b358b48a5"
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <ThemeProvider
           attribute="class"
@@ -62,6 +71,9 @@ export default function RootLayout({
           </QueryProvider>
           <ThemedToaster />
         </ThemeProvider>
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+        )}
       </body>
     </html>
   );

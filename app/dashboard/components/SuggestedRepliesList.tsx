@@ -37,7 +37,11 @@ export function SuggestedRepliesList() {
 
   // Show only the latest date batch; older days live on the "Show all" page.
   const latest = data?.groups[0]
-  const replies = latest?.replies ?? []
+  // Only surface the latest batch if it was generated today (in the user's tz);
+  // an older batch falls through to the empty/generate state below.
+  const isLatestToday =
+    !!latest && !!data && latest.date === todayKeyInTimezone(data.timezone)
+  const replies = isLatestToday ? (latest?.replies ?? []) : []
   const xAccount = data?.xAccount ?? null
 
   const handleUpdated = (updated: SuggestedReply) => {

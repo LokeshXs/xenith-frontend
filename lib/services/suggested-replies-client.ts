@@ -60,3 +60,14 @@ export async function publishSuggestedReply(id: number): Promise<SuggestedReply>
   )
   return data.reply
 }
+
+// POST /api/v1/blocked-accounts — blocks the author of a suggested reply so
+// they won't appear in future generation runs. Idempotent (re-blocking returns
+// 201 with the refreshed row). Returns the created/refreshed BlockedAccount.
+export async function blockAccountFromReply(replyId: number): Promise<unknown> {
+  const { data } = await apiClient.post<{ blocked: unknown }>(
+    '/blocked-accounts',
+    { replyId },
+  )
+  return data.blocked
+}

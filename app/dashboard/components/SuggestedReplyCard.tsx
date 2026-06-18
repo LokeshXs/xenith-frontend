@@ -6,6 +6,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconCopy,
+  IconDots,
   IconExternalLink,
   IconEye,
   IconHeart,
@@ -16,15 +17,30 @@ import {
 } from '@tabler/icons-react'
 import { toast } from 'sonner'
 
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Textarea } from '@/components/ui/textarea'
 import { getErrorMessage } from '@/app/onboarding/utils/getErrorMessage'
 import type { XAccount } from '@/lib/services/posts'
 import type { SuggestedReply } from '@/lib/services/suggested-replies'
 import {
+  blockAccountFromReply,
   publishSuggestedReply,
   updateSuggestedReply,
 } from '@/lib/services/suggested-replies-client'
@@ -137,6 +153,10 @@ export function SuggestedReplyCard({
   const [publishError, setPublishError] = useState(reply.publish_error)
   const [isPublishing, setIsPublishing] = useState(false)
 
+  // Block-account confirmation lifecycle.
+  const [confirmBlockOpen, setConfirmBlockOpen] = useState(false)
+  const [isBlocking, setIsBlocking] = useState(false)
+
   const draftTooLong = draft.length > REPLY_MAX_LENGTH
 
   const copyReply = async () => {
@@ -248,6 +268,34 @@ export function SuggestedReplyCard({
     }
   }
 
+  // Block the author of this suggestion so they won't surface in future runs.
+  // The card is intentionally kept visible after blocking (it drops off on the
+  // next generation run); 401 is handled globally by the apiClient interceptor.
+  const handleBlock = async () => {
+    setIsBlocking(true)
+    try {
+      await blockAccountFromReply(reply.id)
+      setConfirmBlockOpen(false)
+      toast.success(
+        reply.source_author_username
+          ? `Blocked @${reply.source_author_username}`
+          : 'Account blocked',
+      )
+    } catch (error) {
+      const code = isAxiosError(error) ? error.response?.status : undefined
+      if (code === 404) {
+        toast.error('This reply no longer exists')
+      } else if (code === 422) {
+        toast.error('This suggestion has no account to block')
+      } else {
+        console.error('Failed to block account:', error)
+        toast.error(getErrorMessage(error, 'Failed to block account'))
+      }
+    } finally {
+      setIsBlocking(false)
+    }
+  }
+
   return (
     <Card size="sm" className="gap-0 shadow-sm">
       <div className="flex flex-col px-4">
@@ -280,16 +328,41 @@ export function SuggestedReplyCard({
                   </span>
                 </>
               )}
-              <a
-                href={`https://x.com/i/status/${reply.source_tweet_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Open post on X"
-                title="Open post on X"
-                className="ml-auto shrink-0 text-muted-foreground transition-[color,transform] hover:text-foreground active:scale-[0.97]"
-              >
-                <IconExternalLink className="size-4" />
-              </a>
+              <div className="ml-auto flex shrink-0 items-center gap-1">
+                <a
+                  href={`https://x.com/i/status/${reply.source_tweet_id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label="Open post on X"
+                  title="Open post on X"
+                  className="text-muted-foreground transition-[color,transform] hover:text-foreground active:scale-[0.97]"
+                >
+                  <IconExternalLink className="size-4" />
+                </a>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={
+                      <button
+                        type="button"
+                        aria-label="More actions"
+                        title="More actions"
+                        className="text-muted-foreground transition-[color,transform] hover:text-foreground active:scale-[0.97]"
+                      >
+                        <IconDots className="size-4" />
+                      </button>
+                    }
+                  />
+                  <DropdownMenuContent align="end" className="min-w-40">
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => setConfirmBlockOpen(true)}
+                    >
+                      Block account
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
 
             <p className="text-sm whitespace-pre-wrap break-words">
@@ -456,6 +529,35 @@ export function SuggestedReplyCard({
           </div>
         )}
       </div>
+
+      <AlertDialog open={confirmBlockOpen} onOpenChange={setConfirmBlockOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block this account?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {reply.source_author_username
+                ? `@${reply.source_author_username} won't appear in future suggested replies.`
+                : "This account won't appear in future suggested replies."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <Button
+              variant="ghost"
+              onClick={() => setConfirmBlockOpen(false)}
+              disabled={isBlocking}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBlock}
+              disabled={isBlocking}
+            >
+              {isBlocking ? 'Blocking…' : 'Block'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   )
 }
