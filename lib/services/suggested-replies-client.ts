@@ -7,15 +7,10 @@ import type {
 
 // POST /api/v1/suggested-replies/generate — regenerates a fresh batch on demand
 // (the replies-view Refresh and the dashboard's "Generate suggested replies"
-// action). Always regenerates; slow (calls the AI + X API). Pass mode='agent'
-// to force agent-mode generation (A/B testing).
-export async function generateSuggestedReplies(
-  opts?: { mode?: 'agent' },
-): Promise<SuggestedRepliesResponse> {
+// action). Always regenerates; slow (calls the AI + X API).
+export async function generateSuggestedReplies(): Promise<SuggestedRepliesResponse> {
   const { data } = await apiClient.post<SuggestedRepliesResponse>(
     '/suggested-replies/generate',
-    undefined,
-    opts?.mode ? { params: { mode: opts.mode } } : undefined,
   )
   return data
 }

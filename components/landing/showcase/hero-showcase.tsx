@@ -87,20 +87,24 @@ export function HeroShowcase() {
         variants={blurIn("left")}
         className="hidden lg:absolute lg:left-0 lg:top-20 lg:block lg:w-auto"
       >
-      
+        <ClusterLabel>What&apos;s working now</ClusterLabel>
         <div className="flex flex-col items-center gap-3 lg:items-start">
           <InboxCard
-            handle="@ShipItLokesh"
-            views="142k views"
-            lines={["shipped 4 features today", "still no PMF", "still posting"]}
+            handle="@buildinpublic"
+            views="18 min ago"
+            lines={[
+              "the fastest way to learn",
+              "is to ship before",
+              "you feel ready.",
+            ]}
           />
           <InboxCard
-            handle="@designerdada"
-            views="89k views"
+            handle="@productnotes"
+            views="31 min ago"
             lines={[
-              "nobody cares about your",
-              "tech stack. they care",
-              "what you shipped with it.",
+              "your users don't need",
+              "more features. they need",
+              "one problem gone.",
             ]}
             className="lg:ml-8"
           />
@@ -120,17 +124,17 @@ export function HeroShowcase() {
         variants={blurIn("right")}
         className="hidden lg:absolute lg:right-0 lg:top-28 lg:block lg:w-auto"
       >
-      
+        <ClusterLabel>Ready for your schedule</ClusterLabel>
         <div className="flex flex-col items-center gap-3 lg:items-end">
           <QueueCard
-            time="tue 9:14 AM"
-            lines={['"taste compounds. ship it ugly."']}
-            predicted="38k impressions"
+            time="today · 9:00 AM"
+            lines={["your next post is", "already written."]}
+            predicted="Ready to publish"
           />
           <QueueCard
-            time="thu 7:30 PM"
-            lines={["how I got my first", "1,000 followers on X"]}
-            predicted="41k impressions"
+            time="today · 5:30 PM"
+            lines={["one useful idea.", "written in your voice."]}
+            predicted="Scheduled"
             className="lg:mr-8"
           />
         </div>

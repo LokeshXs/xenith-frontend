@@ -58,8 +58,8 @@ export function BentoGrid() {
         className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:h-[42rem] lg:grid-cols-3 lg:grid-rows-3"
       >
         <BentoCard
-          title="Track any creator's growth"
-          description="Top tweets, format mix, and best posting hours — steal what's working before they tell you."
+          title="Turn creator feeds into a posting playbook."
+          description="See their top posts, fastest-growing formats, and best posting times in one place."
           className="lg:col-start-1 lg:row-span-3 lg:row-start-1"
           variants={card}
         >
@@ -67,8 +67,8 @@ export function BentoGrid() {
         </BentoCard>
 
         <BentoCard
-          title="High engagement scores"
-          description="Every draft is scored against what actually performs."
+          title="Score every draft from 0–100."
+          description="Compare predicted engagement before you decide which post goes live."
           className="lg:col-start-2 lg:row-start-1 lg:row-span-2"
           variants={card}
         >
@@ -76,8 +76,8 @@ export function BentoGrid() {
         </BentoCard>
 
         <BentoCard
-          title="Always on-trend"
-          description="Xenith tracks what is trending for you"
+          title="Catch a trend before it becomes old news."
+          description="See which topics are rising in your niche right now."
           className="lg:col-start-2 lg:row-start-3"
           variants={card}
         >
@@ -85,8 +85,8 @@ export function BentoGrid() {
         </BentoCard>
 
         <BentoCard
-          title="Personalized to you with AI"
-          description="We study the creators you add and how you write — then draft posts for you."
+          title="Sound like yourself, not an AI template."
+          description="Choose creators you admire. Xenith learns the patterns you like, then writes an original post in your voice."
           className="lg:col-start-3 lg:row-span-3 lg:row-start-1"
           variants={card}
         >

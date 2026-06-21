@@ -26,24 +26,24 @@ type FeatureCard = {
 const CARDS: FeatureCard[] = [
   {
     index: "01",
-    eyebrow: "Generate",
-    title: "Posts built from your preferences and data.",
+    eyebrow: "Your daily drafts",
+    title: "Get 1–10 posts at the time you choose.",
     description:
-      "Xenith learns your topics, tone, and what's worked for you before — then generates posts that sound like you wrote them on your best day.",
+      "Choose your topics, voice, and delivery time once. Xenith turns what's working in your niche into posts ready for you to review.",
   },
   {
     index: "02",
-    eyebrow: "Publish",
-    title: "Publish straight to X — now or on schedule.",
+    eyebrow: "One-tap publishing",
+    title: "Send a post to X without copy-paste.",
     description:
-      "Hit publish and your post goes live on X in one tap — or pick a slot and Xenith ships it for you. No copy-paste, no app-switching.",
+      "Change any line, publish it now, or choose a time. Your post goes from Xenith to X without opening another app.",
   },
   {
     index: "03",
-    eyebrow: "Reply",
-    title: "Replies that sound like you, in one tap.",
+    eyebrow: "Daily conversations",
+    title: "Reply without living in the X feed.",
     description:
-      "Xenith reads the post, learns your voice, and drafts a reply you'd actually send — ready to copy or tweak.",
+      "Xenith finds relevant posts and drafts replies in your voice. Pick one, edit it if you want, and join the conversation.",
   },
 ]
 
@@ -174,7 +174,7 @@ function FeatureCardContent({ card }: { card: FeatureCard }) {
         <h2 className="mt-4 text-balance drop-shadow-sm  text-xl font-semibold tracking-tight sm:text-5xl">
           {card.title}
         </h2>
-        <p className="mt-5 max-w-md drop-shadow-sm  text-balance text-sm sm:text-lg leading-relaxed opacity-80">
+        <p className="mt-5 max-w-xl drop-shadow-sm  text-balance text-sm sm:text-lg leading-relaxed opacity-80">
           {card.description}
         </p>
       </div>

@@ -5,6 +5,7 @@ import { IconSparkles } from "@tabler/icons-react"
 import { motion, useReducedMotion, type Variants } from "motion/react"
 
 import { XenithLogo, XenithMark } from "@/components/brand/xenith-logo"
+import { LogoutButton } from "@/components/auth/logout-button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { Badge } from "@/components/ui/badge"
 import Image from "next/image"
@@ -159,9 +160,13 @@ export function SoonPage() {
         className="pointer-events-none absolute inset-x-0 top-0 -z-10 mx-auto h-72 max-w-3xl bg-primary/10 blur-[100px]"
       />
 
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-5 sm:px-8 sm:py-7">
+      <header className="mx-auto grid w-full max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-5 py-5 sm:px-8 sm:py-7">
+        <div />
         <XenithLogo />
-        <ThemeToggle />
+        <div className="flex items-center gap-2 justify-self-end">
+          <ThemeToggle />
+          <LogoutButton />
+        </div>
       </header>
 
       <main className="flex flex-1 items-center justify-center px-5 py-8 sm:px-8 sm:py-12">

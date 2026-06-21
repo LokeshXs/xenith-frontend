@@ -25,42 +25,42 @@ const CARDS_STAGGER = 0.07
 const BTN_DELAY = 0.5
 const BG_DELAY = 1
 
-type Tweet = {
-  handle: string
-  views: string
+type Draft = {
+  label: string
+  status: string
   /** Each string is one line of the post body. */
   lines: string[]
 }
 
-const TWEETS: Tweet[] = [
+const DRAFTS: Draft[] = [
   {
-    handle: "@ShipItLokesh",
-    views: "142k views",
-    lines: ["shipped 4 features today", "still no PMF", "still posting"],
+    label: "Draft 01",
+    status: "Build in public",
+    lines: ["the fastest way to learn", "is to ship before", "you feel ready."],
   },
   {
-    handle: "@xenith",
-    views: "210k views",
-    lines: ["everyone's using AI to", "sound the same. use it to", "sound more like you."],
+    label: "Draft 02",
+    status: "Contrarian",
+    lines: ["your users don't need", "more features. they need", "one problem gone."],
   },
   {
-    handle: "@designerdada",
-    views: "89k views",
-    lines: ["nobody cares about your", "tech stack. they care what", "you shipped with it."],
+    label: "Draft 03",
+    status: "Founder story",
+    lines: ["I spent 3 weeks polishing", "what one customer call", "fixed in 20 minutes."],
   },
   {
-    handle: "@buildinpublic",
-    views: "54k views",
-    lines: ["how I got my first", "1,000 followers on X"],
+    label: "Draft 04",
+    status: "Lesson",
+    lines: ["consistency gets easier", "when the blank page", "is already gone."],
   },
   {
-    handle: "@indiehacker",
-    views: "38k views",
-    lines: ["taste compounds.", "ship it ugly."],
+    label: "Draft 05",
+    status: "Short post",
+    lines: ["publish the useful idea.", "polish the next one."],
   },
 ]
 
-function TweetCard({ handle, views, lines, className }: Tweet & { className?: string }) {
+function DraftCard({ label, status, lines, className }: Draft & { className?: string }) {
   return (
     <div
       className={cn(
@@ -71,13 +71,13 @@ function TweetCard({ handle, views, lines, className }: Tweet & { className?: st
       <div className="flex items-center gap-2">
         <Avatar size="sm">
           <AvatarFallback className="bg-primary/10 text-primary">
-            {handle.replace("@", "").charAt(0).toUpperCase()}
+            {label.slice(-2)}
           </AvatarFallback>
         </Avatar>
-        <span translate="no" className="text-sm font-semibold text-foreground">
-          {handle}
+        <span className="text-sm font-semibold text-foreground">
+          {label}
         </span>
-        <span className="text-xs text-muted-foreground">&middot; {views}</span>
+        <span className="text-xs text-muted-foreground">&middot; {status}</span>
       </div>
 
       <div className="mt-3 space-y-0.5 text-sm leading-snug text-foreground">
@@ -88,7 +88,7 @@ function TweetCard({ handle, views, lines, className }: Tweet & { className?: st
 
       <Badge variant="secondary" className="mt-4 gap-1">
         <IconSparkles data-icon="inline-start" aria-hidden />
-        AI generated
+        Ready to post
       </Badge>
     </div>
   )
@@ -145,18 +145,18 @@ export function CTA() {
       </motion.div>
 
       <div className="flex flex-col items-center text-center z-2 relative">
-        <h2 className="text-balance text-4xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl">
+        <h2 className="text-balance text-3xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl md:max-w-4xl max-w-3xl">
           <Words
-            text="Turn showing up into real growth."
+            text="Wake up with tomorrow's posts already written."
             base={HEAD_BASE}
             stagger={HEAD_STAGGER}
             variants={word}
           />
         </h2>
 
-        <p className="mt-6 max-w-xl text-balance text-base sm:text-lg leading-relaxed text-muted-foreground">
+        <p className="mt-6 max-w-xl text-balance text-base sm:text-lg leading-relaxed text-muted-foreground dark:text-foreground">
           <Words
-            text="Xenith does the daily work that actually grows an account — in your voice, around what's trending in your niche. You just hit approve."
+            text="Choose 1–5 posts and a delivery time. Xenith finds the ideas, writes the drafts in your voice, and leaves the final say to you."
             base={PARA_BASE}
             stagger={PARA_STAGGER}
             variants={word}
@@ -168,14 +168,14 @@ export function CTA() {
           edge-faded so the cards bleed off the sides. */}
       <div className="mt-12 sm:[mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
         <div className="flex items-stretch justify-center gap-4 overflow-x-auto pb-2">
-          {TWEETS.map((tweet, i) => (
+          {DRAFTS.map((draft, i) => (
             <motion.div
-              key={tweet.handle}
+              key={draft.label}
               variants={rise}
               custom={CARDS_BASE + i * CARDS_STAGGER}
               className={cn("shrink-0", i !== 0 && "max-sm:hidden")}
             >
-              <TweetCard {...tweet} className={i % 2 === 0 ? "-rotate-1" : "rotate-1"} />
+              <DraftCard {...draft} className={i % 2 === 0 ? "-rotate-1" : "rotate-1"} />
             </motion.div>
           ))}
         </div>
@@ -184,12 +184,13 @@ export function CTA() {
       <motion.div
         variants={rise}
         custom={BTN_DELAY}
-        className="mt-12 flex justify-center relative z-2"
+        className="relative z-2 mt-12 flex flex-col items-center gap-3"
       >
         <Button size="lg" nativeButton={false} render={<Link href="/register" />}>
-          Start growing
+          Create tomorrow&apos;s posts
           <IconSparkles data-icon="inline-end" aria-hidden />
         </Button>
+       
       </motion.div>
     </motion.section>
   )

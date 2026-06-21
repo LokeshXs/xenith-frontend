@@ -56,11 +56,13 @@ const FORM_STEPS: FormStep[] = [
 type MultistepFormProps = {
   initialStep?: number;
   statusSteps?: OnboardingStatusSteps;
+  initiallyComplete?: boolean;
 };
 
 export default function MultistepForm({
   initialStep,
   statusSteps,
+  initiallyComplete = false,
 }: MultistepFormProps) {
   return (
     <FormProvider
@@ -79,12 +81,16 @@ export default function MultistepForm({
         postFormat: "single",
       }}
     >
-      <MultistepFormContent />
+      <MultistepFormContent initiallyComplete={initiallyComplete} />
     </FormProvider>
   );
 }
 
-function MultistepFormContent() {
+function MultistepFormContent({
+  initiallyComplete,
+}: {
+  initiallyComplete: boolean;
+}) {
   const {
     currentStep,
     totalSteps,
@@ -97,7 +103,7 @@ function MultistepFormContent() {
   const currentStepId = steps[currentStep]?.id || "";
   const isCurrentStepValid = validateCurrentStep(currentStepId, formData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isComplete, setIsComplete] = useState(false);
+  const [isComplete, setIsComplete] = useState(initiallyComplete);
   const [error, setError] = useState<string | null>(null);
 
   async function FormSubmissionHandler() {
@@ -130,7 +136,7 @@ function MultistepFormContent() {
   if (isComplete) {
     return (
       <OnboardingDone
-        deliveryTime={formData.deliveryTime}
+        deliveryTime={initiallyComplete ? "" : formData.deliveryTime}
         postsPerDay={formData.postsPerDay}
       />
     );

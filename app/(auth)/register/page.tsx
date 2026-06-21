@@ -1,13 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Separator } from '@/components/ui/separator'
+import { getPostLoginRoute } from '@/lib/auth/post-login-route'
 import { signUp } from '@/lib/supabase/auth-service'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { GoogleButton } from '../components/GoogleButton'
@@ -33,13 +34,22 @@ type RegisterFields = z.infer<typeof registerSchema>
 type FieldErrors = Partial<Record<keyof RegisterFields, string>>
 
 export default function RegisterPage() {
-  useAuthGuard({ redirectIfAuthenticated: '/onboarding' })
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
+  )
+}
 
-  const router = useRouter()
+function RegisterForm() {
+  const searchParams = useSearchParams()
+  const redirectTo = getPostLoginRoute(searchParams.get('redirectTo'))
+  useAuthGuard({ redirectIfAuthenticated: redirectTo })
 
   const [fields, setFields] = useState<RegisterFields>({ email: '', password: '', confirmPassword: '' })
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
+  const [confirmationSent, setConfirmationSent] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -66,7 +76,10 @@ export default function RegisterPage() {
     setIsSubmitting(true)
     setFormError(null)
 
-    const { error } = await signUp({ email: fields.email, password: fields.password })
+    const { error, session } = await signUp(
+      { email: fields.email, password: fields.password },
+      redirectTo,
+    )
 
     if (error) {
       setFormError(error.message)
@@ -74,7 +87,24 @@ export default function RegisterPage() {
       return
     }
 
-    router.replace('/onboarding')
+    if (session) {
+      window.location.replace(redirectTo)
+      return
+    }
+
+    setConfirmationSent(true)
+    setIsSubmitting(false)
+  }
+
+  if (confirmationSent) {
+    return (
+      <div className="w-full text-center">
+        <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+          Confirm your account to continue with your selected subscription.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -149,7 +179,10 @@ export default function RegisterPage() {
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium text-foreground hover:text-primary">
+        <Link
+          href={`/login?redirectTo=${encodeURIComponent(redirectTo)}`}
+          className="font-medium text-foreground hover:text-primary"
+        >
           Sign in
         </Link>
       </p>

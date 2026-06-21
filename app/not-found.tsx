@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { IconArrowLeft, IconHome } from '@tabler/icons-react'
 
@@ -27,14 +26,13 @@ export default function NotFound() {
       </p>
 
       <div className="mt-8 flex items-center gap-2">
-        <Button variant="ghost" onClick={() => router.back()}>
-          <IconArrowLeft />
-          Go back
-        </Button>
-        <Button nativeButton={false} render={<Link href="/" />}>
-          <IconHome />
-          Back to home
-        </Button>
+     
+        <form action="/">
+          <Button type="submit">
+            <IconHome />
+            Back to home
+          </Button>
+        </form>
       </div>
     </main>
   )

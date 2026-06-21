@@ -12,9 +12,17 @@ export async function signIn(credentials: SignInCredentials): Promise<AuthResult
   }
 }
 
-export async function signUp(credentials: SignUpCredentials): Promise<AuthResult> {
+export async function signUp(
+  credentials: SignUpCredentials,
+  redirectTo = getPostLoginRoute(),
+): Promise<AuthResult> {
   const supabase = getSupabaseBrowserClient()
-  const { data, error } = await supabase.auth.signUp(credentials)
+  const { data, error } = await supabase.auth.signUp({
+    ...credentials,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+    },
+  })
   return {
     user: data.user,
     session: data.session ?? null,
@@ -30,6 +38,40 @@ export async function signInWithGoogle(redirectTo = getPostLoginRoute()) {
       redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
     },
   })
+}
+
+export async function requestPasswordReset(
+  email: string,
+): Promise<{ error: AuthError | null }> {
+  const supabase = getSupabaseBrowserClient()
+  const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/reset-password')}`
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  })
+
+  return {
+    error: error ? { message: error.message, status: error.status } : null,
+  }
+}
+
+export async function updatePassword(
+  password: string,
+): Promise<{ error: AuthError | null }> {
+  const supabase = getSupabaseBrowserClient()
+  const { error } = await supabase.auth.updateUser({ password })
+
+  return {
+    error: error ? { message: error.message, status: error.status } : null,
+  }
+}
+
+export async function signOutEverywhere(): Promise<{ error: AuthError | null }> {
+  const supabase = getSupabaseBrowserClient()
+  const { error } = await supabase.auth.signOut({ scope: 'global' })
+
+  return {
+    error: error ? { message: error.message, status: error.status } : null,
+  }
 }
 
 export async function signOut(): Promise<{ error: AuthError | null }> {

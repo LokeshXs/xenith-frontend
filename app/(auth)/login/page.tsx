@@ -33,12 +33,11 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
-  const defaultPostLoginRoute = getPostLoginRoute()
-  useAuthGuard({ redirectIfAuthenticated: defaultPostLoginRoute })
-
   const searchParams = useSearchParams()
   const requestedRedirect = searchParams.get('redirectTo')
   const redirectTo = getPostLoginRoute(requestedRedirect)
+  const wasPasswordReset = searchParams.get('passwordReset') === 'success'
+  useAuthGuard({ redirectIfAuthenticated: redirectTo })
 
   const [fields, setFields] = useState<LoginFields>({ email: '', password: '' })
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
@@ -95,6 +94,11 @@ function LoginForm() {
         <p className="mt-2 text-sm text-muted-foreground">
           Welcome back! Please enter your details.
         </p>
+        {wasPasswordReset && (
+          <p role="status" className="mt-3 text-sm text-muted-foreground">
+            Your password was updated. Sign in with your new password.
+          </p>
+        )}
       </div>
 
       <form onSubmit={handleSubmit} noValidate>
@@ -115,7 +119,15 @@ function LoginForm() {
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="password">Password</FieldLabel>
+            <div className="flex items-center justify-between gap-4">
+              <FieldLabel htmlFor="password">Password</FieldLabel>
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-foreground hover:text-primary"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <PasswordInput
               id="password"
               name="password"
@@ -146,7 +158,10 @@ function LoginForm() {
 
       <p className="mt-8 text-center text-sm text-muted-foreground">
         Don&apos;t have an account?{' '}
-        <Link href="/register" className="font-medium text-foreground hover:text-primary">
+        <Link
+          href={`/register?redirectTo=${encodeURIComponent(redirectTo)}`}
+          className="font-medium text-foreground hover:text-primary"
+        >
           Sign up
         </Link>
       </p>

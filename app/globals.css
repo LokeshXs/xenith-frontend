@@ -335,3 +335,58 @@
     opacity: 0.7;
   }
 }
+
+/* Hero X: brand-token gradient with constant, low-key motion. */
+@keyframes hero-x-gradient {
+  0%,
+  100% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0 0 color-mix(in oklab, var(--primary) 0%, transparent));
+  }
+  50% {
+    background-position: 100% 50%;
+    filter: drop-shadow(
+      0 0 0.22em color-mix(in oklab, var(--chart-4) 60%, transparent)
+    );
+  }
+}
+
+.hero-x-gradient {
+  display: inline-block;
+  padding-inline: 0.03em;
+  font-weight: 800;
+  color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    var(--chart-3) 0%,
+    var(--primary) 25%,
+    var(--chart-4) 50%,
+    var(--primary) 75%,
+    var(--chart-3) 100%
+  );
+  background-position: 0% 50%;
+  background-size: 400% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: hero-x-gradient 6s ease-in-out infinite;
+}
+
+.dark .hero-x-gradient {
+  background-image: linear-gradient(
+    90deg,
+    var(--chart-3) 0%,
+    var(--chart-4),
+    var(--chart-5),
+    var(--chart-4),
+    var(--chart-3) 100%
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-x-gradient {
+    animation: none;
+    background-position: 50% 50%;
+    filter: none;
+  }
+}

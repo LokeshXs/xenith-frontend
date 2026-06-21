@@ -10,6 +10,7 @@ import {
   LayoutListIcon,
   ReplyIcon,
   SettingsIcon,
+  SparklesIcon,
 } from '@animateicons/react/lucide'
 
 import {
@@ -57,7 +58,15 @@ const NAV_ITEMS: NavItem[] = [
   { title: 'All posts', href: '/dashboard/posts', icon: LayoutListIcon },
   { title: 'Suggested Replies', href: '/dashboard/suggested-replies', icon: ReplyIcon },
   { title: 'Settings', href: '/dashboard/settings', icon: SettingsIcon },
+]
+
+const FOOTER_ITEMS: NavItem[] = [
   { title: 'Contact Support', href: '/dashboard/contact-support', icon: ContactIcon },
+  {
+    title: 'Feature Request',
+    href: '/dashboard/feature-requests',
+    icon: SparklesIcon,
+  },
 ]
 
 function isActive(pathname: string, href: string): boolean {
@@ -139,6 +148,16 @@ export function DashboardSidebar() {
       </SidebarContent>
 
       <SidebarFooter>
+        <SidebarMenu>
+          {FOOTER_ITEMS.map((item, index) => (
+            <NavItemLink
+              key={item.href}
+              item={item}
+              active={isActive(pathname, item.href)}
+              index={NAV_ITEMS.length + index}
+            />
+          ))}
+        </SidebarMenu>
         <NavUser />
       </SidebarFooter>
 

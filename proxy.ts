@@ -3,8 +3,8 @@ import type { NextRequest } from 'next/server'
 import { getPostLoginRoute } from '@/lib/auth/post-login-route'
 import { getSupabaseMiddlewareClient } from '@/lib/supabase/middleware-client'
 
-const PROTECTED_ROUTES = ['/onboarding', '/dashboard']
-const AUTH_ROUTES = ['/login', '/register']
+const PROTECTED_ROUTES = ['/onboarding', '/dashboard', '/billing']
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password']
 
 function isProtectedRoute(pathname: string): boolean {
   return PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
@@ -47,8 +47,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
   }
 
   if (isAuthRoute(pathname) && isAuthenticated) {
+    const requestedRedirect = request.nextUrl.searchParams.get('redirectTo')
     return redirectWithRefreshedCookies(
-      new URL(getPostLoginRoute(), request.url),
+      new URL(getPostLoginRoute(requestedRedirect), request.url),
     )
   }
 
