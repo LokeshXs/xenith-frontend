@@ -3,12 +3,25 @@ import { fetchOnboardingStatus } from "@/lib/services/onboarding-status"
 export const BILLING_PLANS = ["creator", "creator-yearly"] as const
 
 export type BillingPlan = (typeof BILLING_PLANS)[number]
+export type ReplyCount = 5
+
+export type ReplyCreditSummary = {
+  balance: number
+  period_granted: number
+  period_used: number
+  credits_per_reply: number
+  default_reply_count: ReplyCount
+  allowed_reply_counts: ReplyCount[]
+  period_started_at: string | null
+  period_ends_at: string | null
+}
 
 export type BillingStatus = {
   plan: BillingPlan | null
   status: string
   has_access: boolean
   access_expires_at: string | null
+  reply_credits: ReplyCreditSummary
 }
 
 export type CheckoutResult =

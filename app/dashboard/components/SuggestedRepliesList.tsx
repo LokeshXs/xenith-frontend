@@ -165,9 +165,11 @@ export function SuggestedRepliesList() {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          {showAllButton}
-          {!isEmpty && refreshButton}
+        <div className="flex flex-col gap-2 sm:items-end">
+          <div className="flex items-center gap-2">
+            {showAllButton}
+            {!isEmpty && refreshButton}
+          </div>
         </div>
       </header>
 

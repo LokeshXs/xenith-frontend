@@ -20,6 +20,7 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from '@/lib/services/preferences'
+import type { ReplyCreditSummary } from '@/lib/services/billing'
 import { BASE_POST_TYPES } from '@/lib/constants/post-types'
 import { isAxiosError } from 'axios'
 
@@ -84,16 +85,29 @@ function Chip({ label, selected, onClick }: ChipProps) {
   )
 }
 
+function formatCreditDate(value: string | null) {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date)
+}
+
 type SettingsFormProps = {
   initialPreferences: UserPreferences
   // Full list of niche options to render — comes entirely from the API. When
   // empty we show an error in the Niche section rather than a hardcoded list.
   suggestedNiches: string[]
+  replyCredits: ReplyCreditSummary | null
 }
 
 export function SettingsForm({
   initialPreferences,
   suggestedNiches,
+  replyCredits,
 }: SettingsFormProps) {
   const [prefs, setPrefs] = useState<UserPreferences>(initialPreferences)
   // Baseline we diff against for the dirty state. Re-set after a successful
@@ -221,9 +235,68 @@ export function SettingsForm({
     setDraftAccount('')
   }
 
+  const usedPercent = replyCredits?.period_granted
+    ? Math.min(
+        100,
+        Math.max(0, (replyCredits.period_used / replyCredits.period_granted) * 100),
+      )
+    : 0
+  const renewalDate = formatCreditDate(replyCredits?.period_ends_at ?? null)
+
   return (
     <div className="relative pb-28">
-      <div className="divide-y divide-border">
+      <div className="divide-y divide-border ">
+        <Section
+          title="Reply credits"
+          description="Current subscription period usage."
+          
+        >
+          {replyCredits ? (
+            <div className="flex flex-col gap-4">
+              <div className="flex justify-between  ">
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm text-muted-foreground">Available</span>
+                  <span className="text-2xl font-semibold tabular-nums">
+                    {replyCredits.balance}
+                  </span>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <span className="text-sm text-muted-foreground">Used</span>
+                  <span className="text-2xl font-semibold tabular-nums">
+                    {replyCredits.period_used}
+                  </span>
+                </div>
+             
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full rounded-full bg-foreground transition-[width]"
+                    style={{ width: `${usedPercent}%` }}
+                  />
+                </div>
+                <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                  <span className="tabular-nums text-primary">
+                    {replyCredits.period_used} used of {replyCredits.period_granted}
+                  </span>
+                  <span>
+                    {renewalDate
+                      ? `Renews ${renewalDate}`
+                      : 'Renews with your next billing period'}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  1 reply cost {replyCredits.credits_per_reply} Credits
+                </p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Reply credit usage is unavailable right now.
+            </p>
+          )}
+        </Section>
+
         <Section
           title="Niche"
           description="The topics we'll source trends and ideas from."
