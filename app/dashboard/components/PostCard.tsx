@@ -376,7 +376,11 @@ export function PostCard({
               Top pick
             </span>
           )}
-          <EngagementBadge score={post.engagement_score} stale={scoreStale} />
+          <EngagementBadge
+            score={post.engagement_score}
+            signals={post.engagement_signals}
+            stale={scoreStale}
+          />
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="More actions"

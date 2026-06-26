@@ -6,6 +6,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import type { EngagementBreakdown } from '@/lib/services/posts'
+import { SignalBars } from './SignalBars'
 
 export interface EngagementBand {
   key: 'strong' | 'solid' | 'average' | 'weak'
@@ -57,10 +59,14 @@ const TOOLTIP_COPY =
 // since the backend doesn't re-score on save.
 export function EngagementBadge({
   score,
+  signals = null,
   stale = false,
   className,
 }: {
   score: number | null
+  // Full breakdown behind the score; when present the tooltip shows per-action
+  // signal bars instead of the generic copy. Absent for legacy/unscored rows.
+  signals?: EngagementBreakdown | null
   stale?: boolean
   className?: string
 }) {
@@ -88,10 +94,25 @@ export function EngagementBadge({
         {score}
         <span className="font-medium opacity-80">{band.label}</span>
       </TooltipTrigger>
-      <TooltipContent className="max-w-[16rem] text-left leading-snug">
-        {TOOLTIP_COPY}
+      <TooltipContent
+        className={cn(
+          'text-left leading-snug',
+          signals ? 'w-[19rem] max-w-[19rem]' : 'max-w-[16rem]',
+        )}
+      >
+        {signals ? (
+          <>
+            <span className="block">
+              How likely an average reader is to take each action, weighted by
+              what the X algorithm rewards.
+            </span>
+            <SignalBars signals={signals.signals} topDriver={signals.top_driver} />
+          </>
+        ) : (
+          TOOLTIP_COPY
+        )}
         {stale && (
-          <span className="mt-1 block opacity-80">
+          <span className="mt-2 block opacity-80">
             This score reflects the original draft and may be outdated after your
             edit.
           </span>

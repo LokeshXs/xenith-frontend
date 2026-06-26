@@ -1,3 +1,23 @@
+// Signal keys map 1:1 to the backend's per-action probability fields.
+export interface EngagementSignals {
+  p_like: number
+  p_reply: number
+  p_reply_engaged_by_author: number
+  p_repost: number
+  p_negative_feedback: number
+}
+
+// Full scoring breakdown behind `engagement_score`: the LLM's per-action
+// probabilities combined with X's heavy-ranker weights. `top_driver` is the
+// EngagementSignals key that contributed most to the score.
+export interface EngagementBreakdown {
+  index: number
+  engagement_score: number
+  signals: EngagementSignals
+  weighted_raw: number
+  top_driver: keyof EngagementSignals
+}
+
 export interface GeneratedPost {
   id: number
   user_id: string
@@ -19,6 +39,9 @@ export interface GeneratedPost {
   // null = not scored (scoring failed for the batch, or the row predates the
   // feature). Treat null as "no prediction", never as zero.
   engagement_score: number | null
+  // Full breakdown behind the score (per-action probabilities + top driver).
+  // null/absent for legacy rows or when scoring failed — render score-only then.
+  engagement_signals?: EngagementBreakdown | null
 }
 
 export interface XAccount {
