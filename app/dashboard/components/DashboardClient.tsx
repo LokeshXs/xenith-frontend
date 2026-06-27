@@ -62,17 +62,6 @@ export function DashboardClient({
     return now >= deliveryTime
   }, [timezone, deliveryTime])
 
-  // The id of the highest-scoring post in today's batch — surfaced as a "Top
-  // pick" marker. Advisory only; null when nothing was scored.
-  const topPickId = useMemo(() => {
-    let best: GeneratedPost | null = null
-    for (const post of posts) {
-      if (post.engagement_score === null) continue
-      if (!best || post.engagement_score > best.engagement_score!) best = post
-    }
-    return best?.id ?? null
-  }, [posts])
-
   // Default order is newest-first (server order). "Sort by engagement" pushes
   // scored posts up by score and unscored (null) posts to the bottom.
   const displayPosts = useMemo(() => {
@@ -170,45 +159,13 @@ export function DashboardClient({
             Today&rsquo;s posts
           </h1>
 
-          {posts.length > 1 && anyScored && (
-            <div className="inline-flex items-center rounded-lg border p-0.5 text-xs">
-              <button
-                type="button"
-                aria-pressed={sortBy === 'newest'}
-                onClick={() => setSortBy('newest')}
-                className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
-                  sortBy === 'newest'
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Newest
-              </button>
-              <button
-                type="button"
-                aria-pressed={sortBy === 'engagement'}
-                onClick={() => setSortBy('engagement')}
-                className={`rounded-md px-2.5 py-1 font-medium transition-colors ${
-                  sortBy === 'engagement'
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Predicted engagement
-              </button>
-            </div>
-          )}
+       
         </div>
 
         {posts.length > 0 ? (
           <div className="columns-1 gap-4 sm:columns-2 xl:columns-3 [column-fill:_balance]">
             {displayPosts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                xAccount={xAccount}
-                isTopPick={post.id === topPickId}
-              />
+              <PostCard key={post.id} post={post} xAccount={xAccount} />
             ))}
           </div>
         ) : isGenerating ? (
@@ -219,7 +176,7 @@ export function DashboardClient({
             aria-live="polite"
             className="columns-1 gap-4 sm:columns-2 xl:columns-3 [column-fill:_balance]"
           >
-            {Array.from({ length: 4 }).map((_, i) => (
+            {Array.from({ length: 6 }).map((_, i) => (
               <PostCardSkeleton key={i} />
             ))}
             <span className="sr-only">Generating your posts…</span>

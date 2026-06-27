@@ -6,16 +6,24 @@ import { IconX } from '@tabler/icons-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { CREATOR_PLAN_LIMITS } from '@/lib/plan-limits';
 
 const USERNAME_REGEX = /^[A-Za-z0-9_]{1,15}$/;
 
 export function InspirationStep() {
   const { formData, updateFormData } = useFormContext();
   const accounts: string[] = formData.inspirationAccounts || [];
+  const maxAccounts = CREATOR_PLAN_LIMITS.maxInspirationAccounts;
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
 
   const addAccount = () => {
+    const availableSlots = maxAccounts - accounts.length;
+    if (availableSlots <= 0) {
+      setError(`You can add up to ${maxAccounts} inspiration accounts.`);
+      return;
+    }
+
     // Allow several usernames at once, separated by spaces. Trim each token and
     // strip a leading @ the user may have typed before the username.
     const tokens = draft
@@ -43,17 +51,29 @@ export function InspirationStep() {
       toAdd.push(token);
     }
 
-    if (toAdd.length > 0) {
-      updateFormData({ inspirationAccounts: [...accounts, ...toAdd] });
+    const accepted = toAdd.slice(0, availableSlots);
+    const overLimit = toAdd.slice(availableSlots);
+
+    if (accepted.length > 0) {
+      updateFormData({ inspirationAccounts: [...accounts, ...accepted] });
     }
 
-    if (invalid.length > 0) {
-      // Keep the rejected tokens in the field so they can be corrected.
-      setDraft(invalid.join(' '));
+    if (invalid.length > 0 || overLimit.length > 0) {
+      // Keep the rejected tokens in the field so they can be corrected or tried
+      // after removing existing accounts.
+      setDraft([...invalid, ...overLimit].join(' '));
+      const invalidMessage =
+        invalid.length > 0
+          ? `Couldn't add ${invalid
+              .map((t) => `"${t}"`)
+              .join(', ')} — use 1–15 letters, numbers, or underscores.`
+          : '';
+      const limitMessage =
+        overLimit.length > 0
+          ? `Added ${accepted.length}; remove an account to add more than ${maxAccounts}.`
+          : '';
       setError(
-        `Couldn't add ${invalid
-          .map((t) => `"${t}"`)
-          .join(', ')} — use 1–15 letters, numbers, or underscores.`,
+        [invalidMessage, limitMessage].filter(Boolean).join(' '),
       );
       return;
     }
@@ -89,7 +109,7 @@ export function InspirationStep() {
         </h2>
         <p className="text-muted-foreground">
           Add X accounts whose posts you love — we&apos;ll draw inspiration from
-          them.
+          them. Add up to {maxAccounts}.
         </p>
       </div>
 
@@ -117,7 +137,7 @@ export function InspirationStep() {
             type="button"
             variant="outline"
             onClick={addAccount}
-            disabled={!draft.trim()}
+            disabled={!draft.trim() || accounts.length >= maxAccounts}
           >
             Add
           </Button>
@@ -126,7 +146,8 @@ export function InspirationStep() {
           <p className="text-sm text-destructive">{error}</p>
         ) : (
           <p className="text-xs text-muted-foreground">
-            Add several at once, separated by spaces.
+            {accounts.length} / {maxAccounts} added. Add several at once,
+            separated by spaces.
           </p>
         )}
       </div>

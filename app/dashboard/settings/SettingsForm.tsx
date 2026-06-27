@@ -22,14 +22,18 @@ import {
 } from '@/lib/services/preferences'
 import type { ReplyCreditSummary } from '@/lib/services/billing'
 import { isAxiosError } from 'axios'
+import { CREATOR_PLAN_LIMITS } from '@/lib/plan-limits'
 
-const POSTS_PER_DAY_OPTIONS = [
-  { value: '1', label: '1 post / day' },
-  { value: '2', label: '2 posts / day' },
-  { value: '3', label: '3 posts / day' },
-  { value: '4', label: '4 posts / day' },
-  { value: '5', label: '5 posts / day' },
-]
+const POSTS_PER_DAY_OPTIONS = Array.from(
+  { length: CREATOR_PLAN_LIMITS.maxPostsPerDay },
+  (_, index) => {
+    const count = index + 1
+    return {
+      value: String(count),
+      label: `${count} post${count === 1 ? '' : 's'} / day`,
+    }
+  },
+)
 
 const USERNAME_REGEX = /^[A-Za-z0-9_]{1,15}$/
 
@@ -62,17 +66,19 @@ type ChipProps = {
   label: string
   selected: boolean
   onClick: () => void
+  disabled?: boolean
 }
 
-function Chip({ label, selected, onClick }: ChipProps) {
+function Chip({ label, selected, onClick, disabled = false }: ChipProps) {
   return (
     <button
       type="button"
       onClick={onClick}
       aria-pressed={selected}
+      disabled={disabled}
       className={cn(
         'inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition-all',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-not-allowed disabled:opacity-45',
         selected
           ? 'border-foreground bg-foreground text-background hover:bg-foreground/90'
           : 'border-border bg-background text-foreground hover:bg-muted',
@@ -117,6 +123,9 @@ export function SettingsForm({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [savedAt, setSavedAt] = useState<number | null>(null)
+  const maxNiches = CREATOR_PLAN_LIMITS.maxNiches
+  const maxInspirationAccounts = CREATOR_PLAN_LIMITS.maxInspirationAccounts
+  const maxPostsPerDay = CREATOR_PLAN_LIMITS.maxPostsPerDay
 
   // Auto-dismiss the "Preferences saved" toast 2.5s after a successful save.
   useEffect(() => {
@@ -137,6 +146,8 @@ export function SettingsForm({
   const toggle = (key: 'niche', value: string) => {
     setPrefs((p) => {
       const list = p[key]
+      if (!list.includes(value) && list.length >= maxNiches) return p
+
       const next = list.includes(value)
         ? list.filter((v) => v !== value)
         : [...list, value]
@@ -147,6 +158,10 @@ export function SettingsForm({
   const addAccount = () => {
     const normalized = draftAccount.trim().replace(/^@+/, '')
     if (!normalized) return
+    if (prefs.inspirationAccounts.length >= maxInspirationAccounts) {
+      setAccountError(`You can add up to ${maxInspirationAccounts} accounts.`)
+      return
+    }
     if (!USERNAME_REGEX.test(normalized)) {
       setAccountError('Use 1–15 letters, numbers, or underscores.')
       return
@@ -180,6 +195,23 @@ export function SettingsForm({
     // immediate feedback without a round-trip.
     if (prefs.niche.filter((n) => n.trim()).length === 0) {
       setSaveError('Pick at least one niche.')
+      return
+    }
+    if (prefs.niche.length > maxNiches) {
+      setSaveError(`Select up to ${maxNiches} niches.`)
+      return
+    }
+    if (prefs.inspirationAccounts.length > maxInspirationAccounts) {
+      setSaveError(`Add up to ${maxInspirationAccounts} inspiration accounts.`)
+      return
+    }
+    const postsPerDay = Number(prefs.postsPerDay)
+    if (
+      !Number.isInteger(postsPerDay) ||
+      postsPerDay < 1 ||
+      postsPerDay > maxPostsPerDay
+    ) {
+      setSaveError(`Choose between 1 and ${maxPostsPerDay} posts per day.`)
       return
     }
 
@@ -302,6 +334,10 @@ export function SettingsForm({
                   label={topic}
                   selected={prefs.niche.includes(topic)}
                   onClick={() => toggle('niche', topic)}
+                  disabled={
+                    !prefs.niche.includes(topic) &&
+                    prefs.niche.length >= maxNiches
+                  }
                 />
               ))}
             </div>
@@ -338,7 +374,10 @@ export function SettingsForm({
                 type="button"
                 variant="outline"
                 onClick={addAccount}
-                disabled={!draftAccount.trim()}
+                disabled={
+                  !draftAccount.trim() ||
+                  prefs.inspirationAccounts.length >= maxInspirationAccounts
+                }
               >
                 <IconPlus />
                 Add
@@ -346,6 +385,12 @@ export function SettingsForm({
             </div>
             {accountError && (
               <p className="text-sm text-destructive">{accountError}</p>
+            )}
+            {!accountError && (
+              <p className="text-xs text-muted-foreground">
+                {prefs.inspirationAccounts.length} / {maxInspirationAccounts}{' '}
+                added
+              </p>
             )}
             {prefs.inspirationAccounts.length > 0 && (
               <div className="flex flex-wrap gap-2">

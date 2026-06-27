@@ -9,6 +9,7 @@ import MultistepForm from "./components/MultistepForm";
 import { BackendStatusGate } from "@/components/backend-status-gate";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { OnboardingStatusError } from "./components/OnboardingStatusError";
+import { OnboardingBillingGate } from "./components/OnboardingBillingGate";
 
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
@@ -33,11 +34,38 @@ export default async function Page() {
     redirect("/login");
   }
 
+  const billing = await fetchBillingStatus(session.access_token);
+
+  if (billing.kind === "unauthorized") {
+    // Cookies can't be mutated from an RSC; /signout is a Route Handler that
+    // clears the Supabase session and 307s to /login.
+    redirect("/signout");
+  }
+
+  if (billing.kind === "error") {
+    return (
+      <OnboardingShell>
+        <OnboardingStatusError
+          title="We couldn't check your subscription"
+          description="Retry the access check to continue onboarding."
+        />
+      </OnboardingShell>
+    );
+  }
+
+  if (!billing.data.has_access) {
+    return (
+      <BackendStatusGate>
+        <OnboardingShell>
+          <OnboardingBillingGate accessToken={session.access_token} />
+        </OnboardingShell>
+      </BackendStatusGate>
+    );
+  }
+
   const result = await fetchOnboardingStatus(session.access_token);
 
   if (result.kind === "unauthorized") {
-    // Cookies can't be mutated from an RSC; /signout is a Route Handler that
-    // clears the Supabase session and 307s to /login.
     redirect("/signout");
   }
 
@@ -50,32 +78,7 @@ export default async function Page() {
   }
 
   if (result.data.completed) {
-    const billing = await fetchBillingStatus(session.access_token);
-    if (billing.kind === "unauthorized") {
-      redirect("/signout");
-    }
-    if (billing.kind === "error") {
-      return (
-        <OnboardingShell>
-          <OnboardingStatusError />
-        </OnboardingShell>
-      );
-    }
-    if (billing.data.has_access) {
-      redirect("/dashboard");
-    }
-
-    return (
-      <BackendStatusGate>
-        <OnboardingShell>
-          <MultistepForm
-            initialStep={resumeStepFromStatus(result.data.steps)}
-            statusSteps={result.data.steps}
-            initiallyComplete
-          />
-        </OnboardingShell>
-      </BackendStatusGate>
-    );
+    redirect("/dashboard");
   }
 
   // Preferences already captured but X not (re)connected — no need to force the

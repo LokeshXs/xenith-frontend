@@ -13,7 +13,6 @@ export interface FormData {
   inspirationAccounts: string[];
   postsPerDay: string;
   deliveryTime: string;
-  postFormat: string;
 }
 
 /**
@@ -112,7 +111,7 @@ export function FormProvider({
   };
 
   const goToPreviousStep = () => {
-    // Steps 0–2 (Connect X, Analyze X, Niche) are one-way; Back starts at Post Type.
+    // Steps 0–2 (Connect X, Analyze X, Niche) are one-way.
     if (currentStep > 2) {
       setCurrentStep(currentStep - 1);
     }

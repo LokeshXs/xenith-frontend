@@ -11,14 +11,18 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TimePicker, formatTime12 } from '@/components/ui/time-picker';
+import { CREATOR_PLAN_LIMITS } from '@/lib/plan-limits';
 
-const POSTS_PER_DAY_OPTIONS = [
-  { value: '1', label: '1 post/day' },
-  { value: '2', label: '2 posts/day' },
-  { value: '3', label: '3 posts/day' },
-  { value: '4', label: '4 posts/day' },
-  { value: '5', label: '5 posts/day' },
-];
+const POSTS_PER_DAY_OPTIONS = Array.from(
+  { length: CREATOR_PLAN_LIMITS.maxPostsPerDay },
+  (_, index) => {
+    const count = index + 1;
+    return {
+      value: String(count),
+      label: `${count} post${count === 1 ? '' : 's'}/day`,
+    };
+  },
+);
 
 
 

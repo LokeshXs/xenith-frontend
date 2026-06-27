@@ -70,7 +70,6 @@ export default function MultistepForm({
 
         postsPerDay: "1",
         deliveryTime: "08:00",
-        postFormat: "single",
       }}
     >
       <MultistepFormContent initiallyComplete={initiallyComplete} />
@@ -128,7 +127,6 @@ function MultistepFormContent({
     return (
       <OnboardingDone
         deliveryTime={initiallyComplete ? "" : formData.deliveryTime}
-        postsPerDay={formData.postsPerDay}
       />
     );
   }

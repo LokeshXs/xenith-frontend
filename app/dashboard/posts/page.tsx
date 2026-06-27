@@ -40,17 +40,6 @@ function groupPostsByDay(
   return groups
 }
 
-// Highest-scoring post id in a batch (a day group), or null when none scored.
-// Used to surface a "Top pick" marker — advisory only.
-function topPickId(posts: GeneratedPost[]): number | null {
-  let best: GeneratedPost | null = null
-  for (const post of posts) {
-    if (post.engagement_score === null) continue
-    if (!best || post.engagement_score > best.engagement_score!) best = post
-  }
-  return best?.id ?? null
-}
-
 export default async function PostsPage() {
   const supabase = await getSupabaseServerClient()
   const {
@@ -109,9 +98,7 @@ export default async function PostsPage() {
 
       {posts.length > 0 ? (
         <div className="flex flex-col gap-8">
-          {groups.map((group) => {
-            const groupTopPickId = topPickId(group.posts)
-            return (
+          {groups.map((group) => (
             <section key={group.key} className="flex flex-col gap-3">
               <h2 className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
                 {group.label}
@@ -125,18 +112,13 @@ export default async function PostsPage() {
                       className="break-inside-avoid animate-in fade-in-0 fill-mode-both duration-300 ease-out motion-safe:slide-in-from-bottom-1"
                       style={{ animationDelay: `${delay}ms` }}
                     >
-                      <PostCard
-                        post={post}
-                        xAccount={xAccount}
-                        isTopPick={post.id === groupTopPickId}
-                      />
+                      <PostCard post={post} xAccount={xAccount} />
                     </div>
                   )
                 })}
               </div>
             </section>
-            )
-          })}
+          ))}
         </div>
       ) : (
         <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed p-8 text-center">

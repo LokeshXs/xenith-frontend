@@ -1,13 +1,4 @@
-'use client'
-
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import type { EngagementBreakdown } from '@/lib/services/posts'
-import { SignalBars } from './SignalBars'
 
 export interface EngagementBand {
   key: 'strong' | 'solid' | 'average' | 'weak'
@@ -48,25 +39,16 @@ export function getEngagementBand(score: number): EngagementBand {
   }
 }
 
-const TOOLTIP_COPY =
-  'Engagement score — 0 to 100. Our estimate of how likely this post is to land, ' +
-  'based on your voice and what’s worked for you before. A relative guide to help you ' +
-  'choose what to publish — not a prediction of exact likes.'
-
-// Compact pill showing the predicted-engagement score + band, with an
-// explanatory tooltip. Renders nothing when the post wasn't scored (null) so
+// Compact pill showing the predicted-engagement score + band. Renders nothing
+// when the post wasn't scored (null) so
 // callers can drop it in unconditionally. `stale` dims it after a heavy edit,
 // since the backend doesn't re-score on save.
 export function EngagementBadge({
   score,
-  signals = null,
   stale = false,
   className,
 }: {
   score: number | null
-  // Full breakdown behind the score; when present the tooltip shows per-action
-  // signal bars instead of the generic copy. Absent for legacy/unscored rows.
-  signals?: EngagementBreakdown | null
   stale?: boolean
   className?: string
 }) {
@@ -75,49 +57,19 @@ export function EngagementBadge({
   const band = getEngagementBand(score)
 
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <span
-            className={cn(
-              'inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] leading-none font-semibold tabular-nums',
-              band.className,
-              stale && 'opacity-60',
-              className,
-            )}
-          />
-        }
-        aria-label={`Engagement score ${score} out of 100, ${band.label}${
-          stale ? ', may be outdated after editing' : ''
-        }`}
-      >
-        {score}
-        <span className="font-medium opacity-80">{band.label}</span>
-      </TooltipTrigger>
-      <TooltipContent
-        className={cn(
-          'text-left leading-snug',
-          signals ? 'w-[19rem] max-w-[19rem]' : 'max-w-[16rem]',
-        )}
-      >
-        {signals ? (
-          <>
-            <span className="block">
-              How likely an average reader is to take each action, weighted by
-              what the X algorithm rewards.
-            </span>
-            <SignalBars signals={signals.signals} topDriver={signals.top_driver} />
-          </>
-        ) : (
-          TOOLTIP_COPY
-        )}
-        {stale && (
-          <span className="mt-2 block opacity-80">
-            This score reflects the original draft and may be outdated after your
-            edit.
-          </span>
-        )}
-      </TooltipContent>
-    </Tooltip>
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[11px] leading-none font-semibold tabular-nums',
+        band.className,
+        stale && 'opacity-60',
+        className,
+      )}
+      aria-label={`Engagement score ${score} out of 100, ${band.label}${
+        stale ? ', may be outdated after editing' : ''
+      }`}
+    >
+      {score}
+      <span className="font-medium opacity-80">{band.label}</span>
+    </span>
   )
 }

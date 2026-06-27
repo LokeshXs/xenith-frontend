@@ -23,8 +23,11 @@ export interface GeneratedPost {
   user_id: string
   post_type: string
   content: string
+  original_content: string | null
   topic: string
   hashtags: string[]
+  original_hashtags: string[]
+  edited: boolean
   sources: { url: string; title: string }[]
   angle: string | null
   status: 'pending' | 'approved' | 'scheduled' | 'posted' | 'failed'
