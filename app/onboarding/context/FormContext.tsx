@@ -8,10 +8,8 @@ import type { OnboardingStatusSteps } from '@/lib/services/onboarding-status';
  */
 export interface FormData {
   niche: string[];
-  postType: string[];
   // Personalized chips from the X analysis (fall back to defaults when empty).
   suggestedNiches: string[];
-  suggestedPostTypes: string[];
   inspirationAccounts: string[];
   postsPerDay: string;
   deliveryTime: string;

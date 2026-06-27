@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { FormProvider, useFormContext } from "../context/FormContext";
 import { NicheStep } from "./NicheStep";
-import { PostTypeStep } from "./PostTypeStep";
 import { InspirationStep } from "./InspirationStep";
 import { ScheduleStep } from "./ScheduleStep";
 import { OnboardingDone } from "./OnboardingDone";
@@ -36,11 +35,6 @@ const FORM_STEPS: FormStep[] = [
       "Pick the topics you post about. This helps us find the right trends for you.",
   },
   {
-    id: "post-type",
-    title: "What do you want to post?",
-    description: "Pick the kinds of posts you want us to generate.",
-  },
-  {
     id: "inspiration",
     title: "Who inspires you?",
     description:
@@ -71,9 +65,7 @@ export default function MultistepForm({
       statusSteps={statusSteps}
       initialData={{
         niche: [], // selected topics
-        postType: [], // selected post types
         suggestedNiches: [], // niche chips from the X analysis (falls back to defaults)
-        suggestedPostTypes: [], // post-type chips from the X analysis (falls back to defaults)
         inspirationAccounts: [], // X usernames to take inspiration from
 
         postsPerDay: "1",
@@ -119,7 +111,6 @@ function MultistepFormContent({
       
       await saveUserPreferences({
         niche: formData.niche,
-        postType: formData.postType,
         inspirationAccounts: formData.inspirationAccounts,
         postsPerDay: formData.postsPerDay,
         deliveryTime: formData.deliveryTime,
@@ -189,20 +180,19 @@ function MultistepFormContent({
 }
 
 function FormStepContent() {
-  const { currentStep } = useFormContext();
+  const { currentStep, steps } = useFormContext();
+  const stepId = steps[currentStep]?.id;
 
-  switch (currentStep) {
-    case 0:
+  switch (stepId) {
+    case "connect-x":
       return <ConnectXStep />;
-    case 1:
+    case "analyze-x":
       return <AnalyzeXStep />;
-    case 2:
+    case "niche":
       return <NicheStep />;
-    case 3:
-      return <PostTypeStep />;
-    case 4:
+    case "inspiration":
       return <InspirationStep />;
-    case 5:
+    case "schedule":
       return <ScheduleStep />;
     default:
       return <ConnectXStep />;

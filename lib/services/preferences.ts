@@ -2,7 +2,6 @@ import { apiClient } from '../api'
 
 export interface UserPreferences {
   niche: string[]
-  postType: string[]
   inspirationAccounts: string[]
   postsPerDay: string
   deliveryTime: string
@@ -22,7 +21,6 @@ interface GetPreferencesResponse {
   data: {
     niche: string[]
     suggestedNiches: string[]
-    postType: string[]
     inspirationAccounts: string[]
     posts_per_day: number
     delivery_time: string
@@ -62,7 +60,6 @@ export async function fetchUserPreferences(
       data: {
         niche: p.niche,
         suggestedNiches: p.suggestedNiches ?? [],
-        postType: p.postType,
         inspirationAccounts: p.inspirationAccounts,
         postsPerDay: String(p.posts_per_day),
         deliveryTime: p.delivery_time,
@@ -99,7 +96,6 @@ export async function updateUserPreferences(
 
   const body = {
     niche: preferences.niche.filter((n) => n.trim() !== ''),
-    postType: preferences.postType.filter((t) => t.trim() !== ''),
     inspirationAccounts: preferences.inspirationAccounts.filter(
       (a) => a.trim() !== '',
     ),
@@ -116,7 +112,6 @@ export async function updateUserPreferences(
   return {
     niche: p.niche,
     suggestedNiches: p.suggestedNiches ?? [],
-    postType: p.postType,
     inspirationAccounts: p.inspirationAccounts,
     postsPerDay: String(p.posts_per_day),
     deliveryTime: p.delivery_time,

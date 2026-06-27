@@ -21,7 +21,6 @@ import {
   type UserPreferences,
 } from '@/lib/services/preferences'
 import type { ReplyCreditSummary } from '@/lib/services/billing'
-import { BASE_POST_TYPES } from '@/lib/constants/post-types'
 import { isAxiosError } from 'axios'
 
 const POSTS_PER_DAY_OPTIONS = [
@@ -129,14 +128,13 @@ export function SettingsForm({
   const isDirty = useMemo(() => {
     return (
       !arrayEquals(prefs.niche, baseline.niche) ||
-      !arrayEquals(prefs.postType, baseline.postType) ||
       !arrayEquals(prefs.inspirationAccounts, baseline.inspirationAccounts) ||
       prefs.postsPerDay !== baseline.postsPerDay ||
       prefs.deliveryTime !== baseline.deliveryTime
     )
   }, [prefs, baseline])
 
-  const toggle = (key: 'niche' | 'postType', value: string) => {
+  const toggle = (key: 'niche', value: string) => {
     setPrefs((p) => {
       const list = p[key]
       const next = list.includes(value)
@@ -184,10 +182,6 @@ export function SettingsForm({
       setSaveError('Pick at least one niche.')
       return
     }
-    if (prefs.postType.filter((t) => t.trim()).length === 0) {
-      setSaveError('Pick at least one post type.')
-      return
-    }
 
     setSaving(true)
     setSaveError('')
@@ -197,7 +191,6 @@ export function SettingsForm({
       // form re-syncs if the API normalized anything (e.g. trimmed entries).
       const next: UserPreferences = {
         niche: updated.niche,
-        postType: updated.postType,
         inspirationAccounts: updated.inspirationAccounts,
         postsPerDay: updated.postsPerDay,
         deliveryTime: updated.deliveryTime,
@@ -318,22 +311,6 @@ export function SettingsForm({
               again later.
             </p>
           )}
-        </Section>
-
-        <Section
-          title="Post types"
-          description="The kinds of posts we'll draft for you."
-        >
-          <div className="flex flex-wrap gap-2">
-            {BASE_POST_TYPES.map((type) => (
-              <Chip
-                key={type}
-                label={type}
-                selected={prefs.postType.includes(type)}
-                onClick={() => toggle('postType', type)}
-              />
-            ))}
-          </div>
         </Section>
 
         <Section

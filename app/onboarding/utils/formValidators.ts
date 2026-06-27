@@ -11,11 +11,6 @@ export const nicheStepSchema = z.object({
   niche: z.array(z.string()).min(1, 'Please select at least one topic'),
 });
 
-// Post Type Step Schema - array of selected post types
-export const postTypeStepSchema = z.object({
-  postType: z.array(z.string()).min(1, 'Please select at least one post type'),
-});
-
 // Schedule Step Schema
 export const scheduleStepSchema = z.object({
   postsPerDay: z.string().min(1, 'Please select posts per day'),
@@ -28,7 +23,6 @@ export const scheduleStepSchema = z.object({
  */
 const stepSchemas: Record<string, z.ZodSchema> = {
   niche: nicheStepSchema,
-  'post-type': postTypeStepSchema,
   schedule: scheduleStepSchema,
 };
 

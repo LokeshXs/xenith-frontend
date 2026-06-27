@@ -65,13 +65,11 @@ export function AnalyzeXStep() {
       try {
         const result = await doTwitterPostsAnalysis()
         if (cancelled) return
-        // Keep the personalized suggestions for the Niche / Post-Type steps and
-        // seed the selections with the server's recommended subset.
+        // Keep the personalized niche suggestions and seed the selection with
+        // the server's recommended subset.
         updateFormData({
           suggestedNiches: result.suggestedNiches,
-          suggestedPostTypes: result.suggestedPostTypes,
           niche: result.preselectedNiches,
-          postType: result.preselectedPostTypes,
         })
         setPhase('done')
         timer = setTimeout(() => {

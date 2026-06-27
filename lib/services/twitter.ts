@@ -4,9 +4,7 @@ export interface TwitterProfileAnalysis {
   success: boolean
   x_username: string
   suggestedNiches: string[] // full list of niche chips to render (≤20)
-  suggestedPostTypes: string[] // full list of post-type chips to render (≤10)
   preselectedNiches: string[] // subset of suggestedNiches, checked by default
-  preselectedPostTypes: string[] // subset of suggestedPostTypes, checked by default
 }
 
 export interface TwitterStatus {

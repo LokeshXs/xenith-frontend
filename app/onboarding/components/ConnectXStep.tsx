@@ -28,20 +28,7 @@ export function ConnectXStep() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-xl font-bold tracking-tight text-pretty sm:text-3xl text-center sm:text-left ">
-          Connect your <em>X</em> account
-        </h2>
-        <p className="text-muted-foreground">
-          Import your recent posts to personalize your content and make generated posts feel like you.
-        </p>
-      </div>
-      <ul className="text-sm text-muted-foreground space-y-2">
-        <li>• Learn your writing style from your own posts</li>
-        <li>• Generate content that sounds authentically like you</li>
-        <li>• Improve suggestions over time</li>
-      </ul>
+    <div className="flex flex-col items-center gap-4">
       {error && <p className="text-sm text-destructive text-center">{error}</p>}
 
       {xConnected ? (
@@ -50,12 +37,9 @@ export function ConnectXStep() {
           <span>X account connected</span>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-3">
-          <Button onClick={handleConnect} disabled={isConnecting} className="w-full" size="lg">
-            {isConnecting ? 'Redirecting to X…' : 'Connect X Account'}
-          </Button>
-        
-        </div>
+        <Button onClick={handleConnect} disabled={isConnecting} size="lg">
+          {isConnecting ? 'Redirecting to X…' : 'Connect your X account'}
+        </Button>
       )}
     </div>
   )

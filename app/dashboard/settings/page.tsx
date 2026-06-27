@@ -10,7 +10,6 @@ import { SettingsForm } from './SettingsForm'
 // Keeps the form usable instead of bouncing them back to onboarding.
 const EMPTY_PREFERENCES: UserPreferences = {
   niche: [],
-  postType: [],
   inspirationAccounts: [],
   postsPerDay: '1',
   deliveryTime: '08:00',
@@ -61,7 +60,6 @@ export default async function SettingsPage() {
     result.kind === 'ok'
       ? {
           niche: result.data.niche,
-          postType: result.data.postType,
           inspirationAccounts: result.data.inspirationAccounts,
           postsPerDay: result.data.postsPerDay,
           deliveryTime: result.data.deliveryTime,

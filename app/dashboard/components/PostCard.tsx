@@ -474,12 +474,6 @@ export function PostCard({
           </>
         )}
 
-        {/* Meta label */}
-        {(post.post_type || post.topic) && (
-          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
-            {[post.post_type, post.topic].filter(Boolean).join(' · ')}
-          </p>
-        )}
       </div>
 
       {/* Footer action bar — status-driven */}
