@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Separator } from '@/components/ui/separator'
 import { getPostLoginRoute } from '@/lib/auth/post-login-route'
+import { recordPostLogin } from '@/lib/services/auth'
 import { signIn } from '@/lib/supabase/auth-service'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { GoogleButton } from '../components/GoogleButton'
@@ -80,6 +81,15 @@ function LoginForm() {
       setFormError('Sign-in completed without creating a session. Please try again.')
       setIsSubmitting(false)
       return
+    }
+
+    try {
+      await recordPostLogin(session.access_token)
+    } catch (error) {
+      console.warn(
+        '[auth] post-login event failed',
+        error instanceof Error ? error.message : error,
+      )
     }
 
     // Use a document navigation so the first protected request is guaranteed

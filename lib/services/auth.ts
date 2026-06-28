@@ -11,3 +11,14 @@ export async function checkSignupEmailExists(email: string): Promise<boolean> {
 
   return data.exists
 }
+
+export async function recordPostLogin(accessToken: string): Promise<void> {
+  await axios.post(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/post-login`,
+    {},
+    {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      timeout: 5000,
+    },
+  )
+}

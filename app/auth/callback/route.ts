@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getPostLoginRoute } from '@/lib/auth/post-login-route'
+import { recordPostLogin } from '@/lib/services/auth'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -68,13 +69,20 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await getSupabaseServerClient()
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
       try {
         await syncProfileFromAuthUser(supabase)
       } catch {
         // The database trigger is the primary profile sync path. This callback
         // write is best-effort so auth redirects are not blocked by RLS.
+      }
+      if (data.session?.access_token) {
+        try {
+          await recordPostLogin(data.session.access_token)
+        } catch {
+          // Welcome email queueing is best-effort and must not block auth redirects.
+        }
       }
       const response = NextResponse.redirect(`${origin}${next}`)
 
