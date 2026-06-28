@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   createCheckout,
   fetchBillingStatus,
+  type BillingStatus,
   type BillingPlan,
 } from "@/lib/services/billing";
 import {
@@ -25,10 +26,12 @@ import {
 
 type OnboardingBillingGateProps = {
   accessToken: string;
+  initialBillingStatus: BillingStatus;
 };
 
 export function OnboardingBillingGate({
   accessToken,
+  initialBillingStatus,
 }: OnboardingBillingGateProps) {
   const [billing, setBilling] = useState<CreatorBillingCycle>("monthly");
   const [status, setStatus] = useState<"unpaid" | "checking" | "error">(
@@ -90,6 +93,22 @@ export function OnboardingBillingGate({
     [accessToken, loadStatus],
   );
 
+  const copy =
+    initialBillingStatus.status === "expired"
+      ? {
+          title: "Your subscription has expired",
+          description: "Choose a Creator plan to reactivate your workspace.",
+        }
+      : initialBillingStatus.status === "failed"
+        ? {
+            title: "Your payment couldn't be completed",
+            description: "Choose a Creator plan to restore access to your workspace.",
+          }
+        : {
+            title: "Activate your workspace",
+            description: "Choose your Creator plan to continue onboarding.",
+          };
+
   if (status === "checking") {
     return (
       <OnboardingStateCard
@@ -120,10 +139,10 @@ export function OnboardingBillingGate({
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <div className="text-center">
         <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-          Activate your workspace
+          {copy.title}
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Choose your Creator plan to continue onboarding.
+          {copy.description}
         </p>
       </div>
       <CreatorPlanCard

@@ -25,4 +25,6 @@ export interface SignInCredentials {
   password: string
 }
 
-export interface SignUpCredentials extends SignInCredentials {}
+export interface SignUpCredentials extends SignInCredentials {
+  name: string
+}

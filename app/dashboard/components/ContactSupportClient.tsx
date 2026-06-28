@@ -21,8 +21,8 @@ const CONTACT_INFO: {
 }[] = [
   {
     label: 'Email',
-    value: 'support@xenith.ai',
-    href: 'mailto:support@xenith.ai',
+    value: 'hello@growwithxenith.com',
+    href: 'mailto:hello@growwithxenith.com',
     icon: MailIcon,
   },
   {

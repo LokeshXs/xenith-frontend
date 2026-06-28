@@ -156,7 +156,7 @@ export function CTA() {
 
         <p className="mt-6 max-w-xl text-balance text-base sm:text-lg leading-relaxed text-muted-foreground dark:text-foreground">
           <Words
-            text="Choose 1–5 posts and a delivery time. Xenith finds the ideas, writes the drafts in your voice, and leaves the final say to you."
+            text="Choose 1–10 posts and a delivery time. Xenith finds the ideas, writes the drafts in your voice, and leaves the final say to you."
             base={PARA_BASE}
             stagger={PARA_STAGGER}
             variants={word}

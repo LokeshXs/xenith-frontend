@@ -29,7 +29,7 @@ const CREATOR_PLAN = {
   yearly: Math.round(29 * 0.8),
   blurb: "Everything you need to create consistently and grow on X.",
   features: [
-    { label: "5 post drafts per day" },
+    { label: "10 post drafts per day" },
     {
       label: "1,000 reply credits",
       tooltip:
@@ -37,17 +37,23 @@ const CREATOR_PLAN = {
     },
     { label: "Schedule as many posts as you want" },
     {
-      label: "Track growth across 4 X profiles",
+      label: "Track across 10 X profiles",
       tooltip:
-        "Analyze up to 4 X profiles for inspiration, then generate posts influenced by their writing patterns while preserving your own voice.",
+        "Analyze up to 10 X profiles for inspiration, then generate posts influenced by their writing patterns while preserving your own voice.",
     },
     {
-      label: "7 days posts analysis to improve future generations",
+      label: "X algorithm-based analytics",
       tooltip:
-        "Every 7 days, your generated posts are analyzed to improve the quality of future post generations.",
+        "Xenith analyzes each post draft with X algorithm signals to estimate likely likes, reposts, replies, and other engagement metrics.",
     },
   ],
 } as const
+
+function getSavingsPercent(monthlyPrice: number, yearlyMonthlyPrice: number) {
+  if (monthlyPrice <= 0 || yearlyMonthlyPrice >= monthlyPrice) return 0
+
+  return Math.round(((monthlyPrice - yearlyMonthlyPrice) / monthlyPrice) * 100)
+}
 
 export type CreatorBillingCycle = "monthly" | "yearly"
 
@@ -69,6 +75,10 @@ export function CreatorPlanCard({
   const reduceMotion = useReducedMotion()
   const price =
     billing === "monthly" ? CREATOR_PLAN.monthly : CREATOR_PLAN.yearly
+  const yearlySavingsPercent = getSavingsPercent(
+    CREATOR_PLAN.monthly,
+    CREATOR_PLAN.yearly,
+  )
   const selectedPlan = billingPlanForCycle(billing)
   const isSubmitting = submittingPlan === selectedPlan
 
@@ -107,7 +117,10 @@ export function CreatorPlanCard({
             <span className="text-sm text-muted-foreground">/ month</span>
           </div>
           {billing === "yearly" && (
-            <p className="text-xs text-muted-foreground">Billed annually</p>
+            <p className="text-xs text-muted-foreground">
+              Billed annually
+              {yearlySavingsPercent > 0 && ` · Save ${yearlySavingsPercent}%`}
+            </p>
           )}
 
           <CardDescription className="mt-2">
@@ -174,6 +187,11 @@ function BillingToggle({
   billing: CreatorBillingCycle
   onChange: (billing: CreatorBillingCycle) => void
 }) {
+  const yearlySavingsPercent = getSavingsPercent(
+    CREATOR_PLAN.monthly,
+    CREATOR_PLAN.yearly,
+  )
+
   return (
     <div className="inline-flex items-center rounded-full border border-border bg-muted/60 p-1 text-sm">
       <ToggleButton
@@ -187,16 +205,18 @@ function BillingToggle({
         onClick={() => onChange("yearly")}
       >
         Yearly
-        <span
-          className={cn(
-            "ml-2 rounded-full px-1.5 py-0.5 text-xs font-semibold sm:text-sm",
-            billing === "yearly"
-              ? "bg-primary/15 text-primary"
-              : "bg-foreground/10 text-muted-foreground",
-          )}
-        >
-          -20%
-        </span>
+        {yearlySavingsPercent > 0 && (
+          <span
+            className={cn(
+              "ml-2 rounded-full px-1.5 py-0.5 text-xs font-semibold sm:text-sm",
+              billing === "yearly"
+                ? "bg-primary/15 text-primary"
+                : "bg-foreground/10 text-muted-foreground",
+            )}
+          >
+            -{yearlySavingsPercent}%
+          </span>
+        )}
       </ToggleButton>
     </div>
   )

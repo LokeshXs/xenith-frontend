@@ -17,10 +17,13 @@ export async function signUp(
   redirectTo = getPostLoginRoute(),
 ): Promise<AuthResult> {
   const supabase = getSupabaseBrowserClient()
+  const name = credentials.name.trim()
   const { data, error } = await supabase.auth.signUp({
-    ...credentials,
+    email: credentials.email,
+    password: credentials.password,
     options: {
       emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      data: { name },
     },
   })
   return {

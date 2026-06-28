@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field'
 import { Separator } from '@/components/ui/separator'
 import { getPostLoginRoute } from '@/lib/auth/post-login-route'
+import { checkSignupEmailExists } from '@/lib/services/auth'
 import { signUp } from '@/lib/supabase/auth-service'
 import { useAuthGuard } from '@/hooks/useAuthGuard'
 import { GoogleButton } from '../components/GoogleButton'
@@ -16,6 +17,7 @@ import { PasswordInput } from '../components/PasswordInput'
 
 const registerSchema = z
   .object({
+    name: z.string().trim().min(1, 'Enter your name'),
     email: z.string().email('Enter a valid email address'),
     password: z.string().min(8, 'Password must be at least 8 characters'),
     confirmPassword: z.string(),
@@ -46,7 +48,12 @@ function RegisterForm() {
   const redirectTo = getPostLoginRoute(searchParams.get('redirectTo'))
   useAuthGuard({ redirectIfAuthenticated: redirectTo })
 
-  const [fields, setFields] = useState<RegisterFields>({ email: '', password: '', confirmPassword: '' })
+  const [fields, setFields] = useState<RegisterFields>({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+  })
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [confirmationSent, setConfirmationSent] = useState(false)
@@ -76,8 +83,28 @@ function RegisterForm() {
     setIsSubmitting(true)
     setFormError(null)
 
+    const values = result.data
+    let emailExists: boolean
+
+    try {
+      emailExists = await checkSignupEmailExists(values.email)
+    } catch {
+      setFormError('Could not verify this email right now. Please try again.')
+      setIsSubmitting(false)
+      return
+    }
+
+    if (emailExists) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        email: 'An account already exists with this email. Sign in instead.',
+      }))
+      setIsSubmitting(false)
+      return
+    }
+
     const { error, session } = await signUp(
-      { email: fields.email, password: fields.password },
+      { name: values.name, email: values.email, password: values.password },
       redirectTo,
     )
 
@@ -118,6 +145,21 @@ function RegisterForm() {
 
       <form onSubmit={handleSubmit} noValidate>
         <FieldGroup className="gap-5">
+          <Field>
+            <FieldLabel htmlFor="name">Name</FieldLabel>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              autoComplete="name"
+              placeholder="Your name"
+              value={fields.name}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+            <FieldError>{fieldErrors.name}</FieldError>
+          </Field>
+
           <Field>
             <FieldLabel htmlFor="email">Email</FieldLabel>
             <Input

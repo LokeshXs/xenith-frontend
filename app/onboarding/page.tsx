@@ -57,7 +57,10 @@ export default async function Page() {
     return (
       <BackendStatusGate>
         <OnboardingShell>
-          <OnboardingBillingGate accessToken={session.access_token} />
+          <OnboardingBillingGate
+            accessToken={session.access_token}
+            initialBillingStatus={billing.data}
+          />
         </OnboardingShell>
       </BackendStatusGate>
     );
