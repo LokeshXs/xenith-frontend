@@ -11,7 +11,10 @@ import { CREATOR_PLAN_LIMITS } from '@/lib/plan-limits';
 export const nicheStepSchema = z.object({
   niche: z
     .array(z.string())
-    .min(1, 'Please select at least one topic')
+    .min(
+      CREATOR_PLAN_LIMITS.minNiches,
+      `Select at least ${CREATOR_PLAN_LIMITS.minNiches} topics`,
+    )
     .max(
       CREATOR_PLAN_LIMITS.maxNiches,
       `Select up to ${CREATOR_PLAN_LIMITS.maxNiches} topics`,
@@ -22,6 +25,10 @@ export const nicheStepSchema = z.object({
 export const inspirationStepSchema = z.object({
   inspirationAccounts: z
     .array(z.string())
+    .min(
+      CREATOR_PLAN_LIMITS.minInspirationAccounts,
+      `Add at least ${CREATOR_PLAN_LIMITS.minInspirationAccounts} inspiration accounts`,
+    )
     .max(
       CREATOR_PLAN_LIMITS.maxInspirationAccounts,
       `Add up to ${CREATOR_PLAN_LIMITS.maxInspirationAccounts} inspiration accounts`,

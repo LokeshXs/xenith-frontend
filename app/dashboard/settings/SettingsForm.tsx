@@ -129,7 +129,9 @@ export function SettingsForm({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [savedAt, setSavedAt] = useState<number | null>(null)
+  const minNiches = CREATOR_PLAN_LIMITS.minNiches
   const maxNiches = CREATOR_PLAN_LIMITS.maxNiches
+  const minInspirationAccounts = CREATOR_PLAN_LIMITS.minInspirationAccounts
   const maxInspirationAccounts = CREATOR_PLAN_LIMITS.maxInspirationAccounts
   const maxPostsPerDay = CREATOR_PLAN_LIMITS.maxPostsPerDay
 
@@ -198,10 +200,10 @@ export function SettingsForm({
   }
 
   const handleSave = async () => {
-    // Match the API's "min 1 non-blank" rule client-side so the user gets
+    // Match the API's minimum rule client-side so the user gets
     // immediate feedback without a round-trip.
-    if (prefs.niche.filter((n) => n.trim()).length === 0) {
-      setSaveError('Pick at least one niche.')
+    if (prefs.niche.filter((n) => n.trim()).length < minNiches) {
+      setSaveError(`Pick at least ${minNiches} niches.`)
       return
     }
     if (prefs.niche.length > maxNiches) {
@@ -210,6 +212,15 @@ export function SettingsForm({
     }
     if (prefs.inspirationAccounts.length > maxInspirationAccounts) {
       setSaveError(`Add up to ${maxInspirationAccounts} inspiration accounts.`)
+      return
+    }
+    if (
+      prefs.inspirationAccounts.filter((account) => account.trim()).length <
+      minInspirationAccounts
+    ) {
+      setSaveError(
+        `Add at least ${minInspirationAccounts} inspiration accounts.`,
+      )
       return
     }
     const postsPerDay = Number(prefs.postsPerDay)
@@ -336,7 +347,7 @@ export function SettingsForm({
 
         <Section
           title="Niche"
-          description="The topics we'll source trends and ideas from."
+          description={`Choose ${minNiches} to ${maxNiches} topics we'll source trends and ideas from.`}
         >
           {suggestedNiches.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -363,7 +374,7 @@ export function SettingsForm({
 
         <Section
           title="Inspiration"
-          description="X accounts we'll learn voice and style from."
+          description={`Add ${minInspirationAccounts} to ${maxInspirationAccounts} X accounts we'll learn voice and style from.`}
         >
           <div className="flex flex-col gap-3">
             <div className="flex gap-2">
@@ -402,6 +413,9 @@ export function SettingsForm({
               <p className="text-xs text-muted-foreground">
                 {prefs.inspirationAccounts.length} / {maxInspirationAccounts}{' '}
                 added
+                {prefs.inspirationAccounts.length < minInspirationAccounts
+                  ? `. Add at least ${minInspirationAccounts} to continue.`
+                  : ''}
               </p>
             )}
             {prefs.inspirationAccounts.length > 0 && (

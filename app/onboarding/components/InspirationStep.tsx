@@ -13,7 +13,9 @@ const USERNAME_REGEX = /^[A-Za-z0-9_]{1,15}$/;
 export function InspirationStep() {
   const { formData, updateFormData } = useFormContext();
   const accounts: string[] = formData.inspirationAccounts || [];
+  const minAccounts = CREATOR_PLAN_LIMITS.minInspirationAccounts;
   const maxAccounts = CREATOR_PLAN_LIMITS.maxInspirationAccounts;
+  const isBelowMinimum = accounts.length < minAccounts;
   const [draft, setDraft] = useState('');
   const [error, setError] = useState('');
 
@@ -102,14 +104,11 @@ export function InspirationStep() {
       {/* Header */}
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-bold tracking-tight text-pretty sm:text-3xl text-center sm:text-left">
-          Who <em>inspires</em> you?{' '}
-          <span className="text-base max-sm:text-xs font-normal text-muted-foreground">
-            (optional)
-          </span>
+          Who <em>inspires</em> you?
         </h2>
         <p className="text-muted-foreground">
           Add X accounts whose posts you love — we&apos;ll draw inspiration from
-          them. Add up to {maxAccounts}.
+          them. Add {minAccounts} to {maxAccounts}.
         </p>
       </div>
 
@@ -148,6 +147,7 @@ export function InspirationStep() {
           <p className="text-xs text-muted-foreground">
             {accounts.length} / {maxAccounts} added. Add several at once,
             separated by spaces.
+            {isBelowMinimum ? ` Add at least ${minAccounts} to continue.` : ''}
           </p>
         )}
       </div>

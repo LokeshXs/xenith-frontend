@@ -20,8 +20,10 @@ const NICHE_TOPICS = [
 export function NicheStep() {
   const { formData, updateFormData } = useFormContext();
   const selectedTopics: string[] = formData.niche || [];
+  const minNiches = CREATOR_PLAN_LIMITS.minNiches;
   const maxNiches = CREATOR_PLAN_LIMITS.maxNiches;
   const isAtLimit = selectedTopics.length >= maxNiches;
+  const isBelowMinimum = selectedTopics.length < minNiches;
   // Use the X-analysis suggestions when present; otherwise fall back to the
   // default topics (e.g. the user skipped connecting their X account).
   const topics: string[] = formData.suggestedNiches?.length
@@ -48,7 +50,7 @@ export function NicheStep() {
         </h2>
         <p className="text-muted-foreground">
           Pick the topics you post about. This helps us find the right trends
-          for you. Select up to {maxNiches}.
+          for you. Select {minNiches} to {maxNiches}.
         </p>
       </div>
 
@@ -73,6 +75,7 @@ export function NicheStep() {
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
           {selectedTopics.length} / {maxNiches} selected
+          {isBelowMinimum ? ` · Select at least ${minNiches} to continue.` : ''}
         </p>
       </div>
     </div>

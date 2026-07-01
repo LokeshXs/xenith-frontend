@@ -11,7 +11,7 @@ export type BillingSubscriptionStatus =
   | "cancelled"
   | "expired"
   | "failed"
-export type ReplyCount = 5
+export type ReplyCount = 5 | 10
 
 export type ReplyCreditSummary = {
   balance: number
