@@ -4,6 +4,9 @@ export interface UserPreferences {
   niche: string[]
   inspirationAccounts: string[]
   postsPerDay: string
+  // Suggested replies generated per run. Stored as a string for the form state
+  // (like postsPerDay); only "5" or "10" are valid.
+  replyCount: string
   deliveryTime: string
 }
 
@@ -23,6 +26,7 @@ interface GetPreferencesResponse {
     suggestedNiches: string[]
     inspirationAccounts: string[]
     posts_per_day: number
+    reply_count: number
     delivery_time: string
     timezone: string
   }
@@ -54,7 +58,6 @@ export async function fetchUserPreferences(
     if (!res.ok) return { kind: 'error' }
     const json = (await res.json()) as GetPreferencesResponse
     const p = json.data
-    console.log(p);
     return {
       kind: 'ok',
       data: {
@@ -62,6 +65,7 @@ export async function fetchUserPreferences(
         suggestedNiches: p.suggestedNiches ?? [],
         inspirationAccounts: p.inspirationAccounts,
         postsPerDay: String(p.posts_per_day),
+        replyCount: String(p.reply_count),
         deliveryTime: p.delivery_time,
         timezone: p.timezone,
       },
@@ -80,6 +84,8 @@ export async function saveUserPreferences(preferences: UserPreferences) {
     inspirationAccounts: preferences.inspirationAccounts.filter(
       (a) => a.trim() !== '',
     ),
+    // Backend validates replyCount as a number literal (5 | 10), so send a number.
+    replyCount: Number(preferences.replyCount),
     timezone,
   })
   return data
@@ -100,6 +106,8 @@ export async function updateUserPreferences(
       (a) => a.trim() !== '',
     ),
     postsPerDay: preferences.postsPerDay,
+    // Backend validates replyCount as a number literal (5 | 10), so send a number.
+    replyCount: Number(preferences.replyCount),
     deliveryTime: preferences.deliveryTime,
     timezone,
   }
@@ -114,6 +122,7 @@ export async function updateUserPreferences(
     suggestedNiches: p.suggestedNiches ?? [],
     inspirationAccounts: p.inspirationAccounts,
     postsPerDay: String(p.posts_per_day),
+    replyCount: String(p.reply_count),
     deliveryTime: p.delivery_time,
     timezone: p.timezone,
   }

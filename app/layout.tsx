@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono, Outfit } from "next/font/google";
 import "./globals.css";
@@ -9,6 +9,7 @@ import { ThemedToaster } from "@/components/themed-toaster";
 import { QueryProvider } from "@/components/query-provider";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next"
+import { siteConfig } from "@/lib/seo/config";
 
 const outfit = Outfit({subsets:['latin'],variable:'--font-sans'});
 
@@ -22,24 +23,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_TITLE = "Xenith — Grow on X like you never log off"
-const SITE_DESCRIPTION =
-  "Your X growth engine. Xenith writes posts and replies in your real voice, built around what's trending in your niche — so you grow on X without living on it."
-
 export const metadata: Metadata = {
-  title: SITE_TITLE,
-  description: SITE_DESCRIPTION,
+  metadataBase: new URL(siteConfig.url),
+  title: {
+    default: siteConfig.title,
+    template: "%s — Xenith",
+  },
+  description: siteConfig.description,
+  applicationName: siteConfig.name,
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
-    siteName: "Xenith",
+    title: siteConfig.title,
+    description: siteConfig.description,
+    siteName: siteConfig.name,
+    url: siteConfig.url,
+    locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE_TITLE,
-    description: SITE_DESCRIPTION,
+    title: siteConfig.title,
+    description: siteConfig.description,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0c0c0e" },
+  ],
 };
 
 export default function RootLayout({

@@ -35,6 +35,12 @@ const POSTS_PER_DAY_OPTIONS = Array.from(
   },
 )
 
+// Suggested replies generated per run — only 5 or 10 are supported.
+const REPLY_COUNT_OPTIONS = [
+  { value: '5', label: '5 replies' },
+  { value: '10', label: '10 replies' },
+] as const
+
 const USERNAME_REGEX = /^[A-Za-z0-9_]{1,15}$/
 
 function arrayEquals(a: string[], b: string[]) {
@@ -139,6 +145,7 @@ export function SettingsForm({
       !arrayEquals(prefs.niche, baseline.niche) ||
       !arrayEquals(prefs.inspirationAccounts, baseline.inspirationAccounts) ||
       prefs.postsPerDay !== baseline.postsPerDay ||
+      prefs.replyCount !== baseline.replyCount ||
       prefs.deliveryTime !== baseline.deliveryTime
     )
   }, [prefs, baseline])
@@ -214,6 +221,10 @@ export function SettingsForm({
       setSaveError(`Choose between 1 and ${maxPostsPerDay} posts per day.`)
       return
     }
+    if (prefs.replyCount !== '5' && prefs.replyCount !== '10') {
+      setSaveError('Choose either 5 or 10 suggested replies.')
+      return
+    }
 
     setSaving(true)
     setSaveError('')
@@ -225,6 +236,7 @@ export function SettingsForm({
         niche: updated.niche,
         inspirationAccounts: updated.inspirationAccounts,
         postsPerDay: updated.postsPerDay,
+        replyCount: updated.replyCount,
         deliveryTime: updated.deliveryTime,
       }
       setPrefs(next)
@@ -452,6 +464,33 @@ export function SettingsForm({
                 }
               />
             </div>
+          </div>
+        </Section>
+
+        <Section
+          title="Suggested replies"
+          description="How many reply suggestions we generate each run."
+        >
+          <div className="flex flex-col gap-2 sm:max-w-xs">
+            <Label htmlFor="reply-count">Replies per run</Label>
+            <Select
+              value={prefs.replyCount}
+              onValueChange={(v) => {
+                if (typeof v !== 'string') return
+                setPrefs((p) => ({ ...p, replyCount: v }))
+              }}
+            >
+              <SelectTrigger id="reply-count">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REPLY_COUNT_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </Section>
       </div>

@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { AllSuggestedReplies } from '../../components/AllSuggestedReplies'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'All suggested replies' }
 
 export default async function AllSuggestedRepliesPage() {
   const supabase = await getSupabaseServerClient()

@@ -1,5 +1,12 @@
+import type { Metadata } from "next"
+
 import { XenithLogo, XenithMark } from "@/components/brand/xenith-logo"
 import { LogoDownloads } from "./LogoDownloads"
+
+export const metadata: Metadata = {
+  title: "Logo preview",
+  robots: { index: false, follow: false },
+}
 
 type Variant = "tile" | "glyph"
 

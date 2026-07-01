@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import {
@@ -10,6 +11,11 @@ import { BackendStatusGate } from "@/components/backend-status-gate";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { OnboardingStatusError } from "./components/OnboardingStatusError";
 import { OnboardingBillingGate } from "./components/OnboardingBillingGate";
+
+export const metadata: Metadata = {
+  title: "Onboarding",
+  robots: { index: false, follow: false },
+};
 
 function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (

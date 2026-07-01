@@ -2,6 +2,9 @@ import { redirect } from 'next/navigation'
 
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { FeatureRequestsClient } from '../components/FeatureRequestsClient'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Feature requests' }
 
 export default async function FeatureRequestsPage() {
   const supabase = await getSupabaseServerClient()

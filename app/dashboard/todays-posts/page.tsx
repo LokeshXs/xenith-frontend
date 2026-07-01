@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { fetchPostsToday } from '@/lib/services/posts'
 import { DashboardClient } from '../components/DashboardClient'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: "Today's posts" }
 
 export default async function Page() {
   const supabase = await getSupabaseServerClient()

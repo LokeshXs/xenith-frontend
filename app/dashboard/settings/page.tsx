@@ -5,6 +5,9 @@ import { fetchBillingStatus } from '@/lib/services/billing'
 import { fetchUserPreferences } from '@/lib/services/preferences'
 import type { UserPreferences } from '@/lib/services/preferences'
 import { SettingsForm } from './SettingsForm'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Settings' }
 
 // What we hand to the form when the user has never saved preferences (404).
 // Keeps the form usable instead of bouncing them back to onboarding.
@@ -12,6 +15,7 @@ const EMPTY_PREFERENCES: UserPreferences = {
   niche: [],
   inspirationAccounts: [],
   postsPerDay: '1',
+  replyCount: '5',
   deliveryTime: '08:00',
 }
 
@@ -62,6 +66,7 @@ export default async function SettingsPage() {
           niche: result.data.niche,
           inspirationAccounts: result.data.inspirationAccounts,
           postsPerDay: result.data.postsPerDay,
+          replyCount: result.data.replyCount,
           deliveryTime: result.data.deliveryTime,
         }
       : EMPTY_PREFERENCES

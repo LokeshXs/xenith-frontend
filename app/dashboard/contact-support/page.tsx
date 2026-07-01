@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { ContactSupportClient } from '../components/ContactSupportClient'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Contact support' }
 
 export default async function ContactSupportPage() {
   const supabase = await getSupabaseServerClient()

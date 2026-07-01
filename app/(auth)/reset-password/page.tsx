@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
@@ -5,6 +6,11 @@ import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { ResetPasswordForm } from './reset-password-form'
 
 const RECOVERY_COOKIE = 'xenith-password-recovery'
+
+export const metadata: Metadata = {
+  title: 'Reset password',
+  robots: { index: false, follow: false },
+}
 
 export default async function ResetPasswordPage() {
   const cookieStore = await cookies()

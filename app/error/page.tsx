@@ -1,4 +1,11 @@
+import type { Metadata } from 'next'
+
 import { ErrorContent } from './components/ErrorContent'
+
+export const metadata: Metadata = {
+  title: 'Error',
+  robots: { index: false, follow: false },
+}
 
 type ErrorPageProps = {
   searchParams: Promise<{ twitter?: string; reason?: string }>

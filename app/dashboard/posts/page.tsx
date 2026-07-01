@@ -4,6 +4,9 @@ import { fetchPosts, fetchPostsToday } from '@/lib/services/posts'
 import type { GeneratedPost, XAccount } from '@/lib/services/posts'
 import { formatDayLabel } from '@/lib/utils/day-label'
 import { PostCard } from '../components/PostCard'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Posts' }
 
 type PostGroup = { key: string; label: string; posts: GeneratedPost[] }
 

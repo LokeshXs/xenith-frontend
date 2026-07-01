@@ -1,12 +1,15 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
-import { IconArrowLeft, IconHome } from '@tabler/icons-react'
+import { IconHome } from '@tabler/icons-react'
 
 import { Button } from '@/components/ui/button'
+import { useAuth } from '@/context/AuthContext'
 
 export default function NotFound() {
-  const router = useRouter()
+  const { isAuthenticated } = useAuth()
+
+  const href = isAuthenticated ? '/dashboard/todays-posts' : '/'
+  const label = isAuthenticated ? 'Back to dashboard' : 'Back to home'
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center px-6 text-center">
@@ -27,10 +30,10 @@ export default function NotFound() {
 
       <div className="mt-8 flex items-center gap-2">
      
-        <form action="/">
+        <form action={href}>
           <Button type="submit">
             <IconHome />
-            Back to home
+            {label}
           </Button>
         </form>
       </div>

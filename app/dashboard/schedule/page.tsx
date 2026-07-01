@@ -1,3 +1,7 @@
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = { title: 'Schedule' }
+
 export default function SchedulePage() {
   return (
     <div className="flex flex-col gap-2 p-4 sm:p-6 md:p-8">

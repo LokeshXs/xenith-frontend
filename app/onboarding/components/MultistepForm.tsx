@@ -112,6 +112,8 @@ function MultistepFormContent({
         niche: formData.niche,
         inspirationAccounts: formData.inspirationAccounts,
         postsPerDay: formData.postsPerDay,
+        // Reply count is configured later in Settings; start at the default.
+        replyCount: '5',
         deliveryTime: formData.deliveryTime,
       });
     } catch (err: unknown) {

@@ -24,6 +24,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle"
 import { XenithLogo } from "@/components/brand/xenith-logo"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/context/AuthContext"
 
 const NAV_LINKS = [
   { label: "Features", href: "#features" },
@@ -58,6 +59,10 @@ export function Navbar() {
   const [isDesktop, setIsDesktop] = useState(false)
   const reduce = useReducedMotion()
   const { scrollYProgress } = useScroll()
+  const { isAuthenticated } = useAuth()
+
+  const ctaHref = isAuthenticated ? "/dashboard/todays-posts" : "/login"
+  const ctaLabel = isAuthenticated ? "My Dashboard" : "Sign in"
 
   useMotionValueEvent(scrollYProgress, "change", (v) => {
     setScrolled(v > 0.1)
@@ -125,8 +130,8 @@ export function Navbar() {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button size="sm" nativeButton={false} render={<Link href="/login" />}>
-              Sign in
+            <Button size="sm" nativeButton={false} render={<Link href={ctaHref} />}>
+              {ctaLabel}
             </Button>
 
             {/* Mobile: hamburger → drawer with the same nav links. */}

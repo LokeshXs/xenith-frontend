@@ -3,15 +3,32 @@ import type { NextRequest } from 'next/server'
 import { getPostLoginRoute } from '@/lib/auth/post-login-route'
 import { getSupabaseMiddlewareClient } from '@/lib/supabase/middleware-client'
 
-const PROTECTED_ROUTES = ['/onboarding', '/dashboard', '/billing']
-const AUTH_ROUTES = ['/login', '/register', '/forgot-password']
+const PUBLIC_ROUTES = [
+  '/',
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/auth/callback',
+  '/signout',
+  '/error',
+  '/soon',
+  '/logo-preview',
+  '/opengraph-image',
+] as const
 
-function isProtectedRoute(pathname: string): boolean {
-  return PROTECTED_ROUTES.some((route) => pathname.startsWith(route))
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password'] as const
+
+function matchesRoute(pathname: string, route: string): boolean {
+  return pathname === route || (route !== '/' && pathname.startsWith(`${route}/`))
+}
+
+function isPublicRoute(pathname: string): boolean {
+  return PUBLIC_ROUTES.some((route) => matchesRoute(pathname, route))
 }
 
 function isAuthRoute(pathname: string): boolean {
-  return AUTH_ROUTES.some((route) => pathname.startsWith(route))
+  return AUTH_ROUTES.some((route) => matchesRoute(pathname, route))
 }
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
@@ -40,9 +57,9 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
     return redirectResponse
   }
 
-  if (isProtectedRoute(pathname) && !isAuthenticated) {
+  if (!isPublicRoute(pathname) && !isAuthenticated) {
     const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('redirectTo', pathname)
+    loginUrl.searchParams.set('redirectTo', `${pathname}${request.nextUrl.search}`)
     return redirectWithRefreshedCookies(loginUrl)
   }
 
@@ -59,6 +76,6 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\..*).*)',
   ],
 }
