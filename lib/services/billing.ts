@@ -1,5 +1,3 @@
-import { fetchOnboardingStatus } from "@/lib/services/onboarding-status"
-
 export const BILLING_PLANS = ["creator", "creator-yearly"] as const
 
 export type BillingPlan = (typeof BILLING_PLANS)[number]
@@ -134,17 +132,6 @@ export async function fetchBillingStatus(
 }
 
 export async function postAuthAppRoute(accessToken: string): Promise<string> {
-  const [onboarding, billing] = await Promise.all([
-    fetchOnboardingStatus(accessToken),
-    fetchBillingStatus(accessToken),
-  ])
-  if (
-    onboarding.kind === "ok" &&
-    onboarding.data.completed &&
-    billing.kind === "ok" &&
-    billing.data.has_access
-  ) {
-    return "/dashboard"
-  }
+  await fetchBillingStatus(accessToken)
   return "/onboarding"
 }

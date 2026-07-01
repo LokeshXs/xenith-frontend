@@ -36,9 +36,20 @@ export default async function DashboardLayout({
   ])
   if (billing.kind === 'unauthorized' || onboarding.kind === 'unauthorized')
     redirect('/signout')
-  if (billing.kind === 'error' || !billing.data.has_access) redirect('/onboarding')
-  if (onboarding.kind === 'error' || !onboarding.data.completed)
+  if (billing.kind === 'error' || onboarding.kind === 'error') {
     redirect('/onboarding')
+  }
+
+  const hasRequiredOnboardingState =
+    onboarding.data.steps.preferences &&
+    onboarding.data.steps.xAccount &&
+    onboarding.data.steps.styleProfile
+  const hasActiveSubscription =
+    billing.data.has_access && billing.data.status === 'active'
+
+  if (!hasRequiredOnboardingState || !hasActiveSubscription) {
+    redirect('/onboarding')
+  }
 
   // The sidebar persists its open/collapsed state in this cookie; read it on the
   // server so the initial render matches and there's no flash on reload.

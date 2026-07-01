@@ -51,12 +51,16 @@ type MultistepFormProps = {
   initialStep?: number;
   statusSteps?: OnboardingStatusSteps;
   initiallyComplete?: boolean;
+  initialSuggestedNiches?: string[];
+  initialSelectedNiches?: string[];
 };
 
 export default function MultistepForm({
   initialStep,
   statusSteps,
   initiallyComplete = false,
+  initialSuggestedNiches = [],
+  initialSelectedNiches = [],
 }: MultistepFormProps) {
   return (
     <FormProvider
@@ -64,8 +68,8 @@ export default function MultistepForm({
       initialStep={initialStep}
       statusSteps={statusSteps}
       initialData={{
-        niche: [], // selected topics
-        suggestedNiches: [], // niche chips from the X analysis (falls back to defaults)
+        niche: initialSelectedNiches, // selected topics
+        suggestedNiches: initialSuggestedNiches, // niche chips from the X analysis (falls back to defaults)
         inspirationAccounts: [], // X usernames to take inspiration from
 
         postsPerDay: "1",

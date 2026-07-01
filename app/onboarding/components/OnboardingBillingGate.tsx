@@ -54,7 +54,7 @@ export function OnboardingBillingGate({
       return;
     }
 
-    if (result.data.has_access) {
+    if (result.data.has_access && result.data.status === "active") {
       window.location.reload();
       return;
     }
@@ -99,6 +99,16 @@ export function OnboardingBillingGate({
           title: "Your subscription has expired",
           description: "Choose a Creator plan to reactivate your workspace.",
         }
+      : initialBillingStatus.status === "cancelled"
+        ? {
+            title: "Your subscription is cancelled",
+            description: "Choose a Creator plan to reactivate your workspace.",
+          }
+        : initialBillingStatus.status === "on_hold"
+          ? {
+              title: "Your subscription is on hold",
+              description: "Choose a Creator plan to restore access to your workspace.",
+            }
       : initialBillingStatus.status === "failed"
         ? {
             title: "Your payment couldn't be completed",

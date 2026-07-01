@@ -5,6 +5,7 @@ import {
   fetchOnboardingStatus,
   resumeStepFromStatus,
 } from "@/lib/services/onboarding-status";
+import { fetchOnboardingNicheSuggestions } from "@/lib/services/onboarding-niche-suggestions";
 import { fetchBillingStatus } from "@/lib/services/billing";
 import MultistepForm from "./components/MultistepForm";
 import { BackendStatusGate } from "@/components/backend-status-gate";
@@ -59,7 +60,10 @@ export default async function Page() {
     );
   }
 
-  if (!billing.data.has_access) {
+  const hasActiveSubscription =
+    billing.data.has_access && billing.data.status === "active";
+
+  if (!hasActiveSubscription) {
     return (
       <BackendStatusGate>
         <OnboardingShell>
@@ -90,13 +94,30 @@ export default async function Page() {
     redirect("/dashboard");
   }
 
-  // Preferences already captured but X not (re)connected — no need to force the
-  // Connect X step again; the rest of the app can run with stored preferences.
-  if (result.data.steps.preferences && !result.data.steps.xAccount) {
-    redirect("/dashboard");
+  const initialStep = resumeStepFromStatus(result.data.steps);
+  const shouldHydrateNicheSuggestions =
+    result.data.steps.xAccount &&
+    result.data.steps.styleProfile &&
+    !result.data.steps.preferences;
+
+  const nicheSuggestions = shouldHydrateNicheSuggestions
+    ? await fetchOnboardingNicheSuggestions(session.access_token)
+    : null;
+
+  if (nicheSuggestions?.kind === "unauthorized") {
+    redirect("/signout");
   }
 
-  const initialStep = resumeStepFromStatus(result.data.steps);
+  if (nicheSuggestions?.kind === "error") {
+    return (
+      <OnboardingShell>
+        <OnboardingStatusError
+          title="We couldn't load your niche suggestions"
+          description="Retry onboarding so we can restore the topics generated from your X analysis."
+        />
+      </OnboardingShell>
+    );
+  }
 
   return (
     <BackendStatusGate>
@@ -104,6 +125,8 @@ export default async function Page() {
         <MultistepForm
           initialStep={initialStep}
           statusSteps={result.data.steps}
+          initialSuggestedNiches={nicheSuggestions?.data.suggestedNiches ?? []}
+          initialSelectedNiches={nicheSuggestions?.data.preselectedNiches ?? []}
         />
       </OnboardingShell>
     </BackendStatusGate>
