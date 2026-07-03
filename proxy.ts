@@ -14,7 +14,7 @@ const PUBLIC_ROUTES = [
   '/error',
   '/soon',
   '/logo-preview',
-  '/opengraph-image',
+  '/open-graph.png',
 ] as const
 
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password'] as const

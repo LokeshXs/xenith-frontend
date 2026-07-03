@@ -147,16 +147,16 @@ export function CTA() {
       <div className="flex flex-col items-center text-center z-2 relative">
         <h2 className="text-balance text-3xl font-semibold leading-[1.05] tracking-tight text-foreground sm:text-5xl md:text-6xl md:max-w-4xl max-w-3xl">
           <Words
-            text="Wake up with tomorrow's posts already written."
+            text="Someone else is taking the attention you should own."
             base={HEAD_BASE}
             stagger={HEAD_STAGGER}
             variants={word}
           />
         </h2>
 
-        <p className="mt-6 max-w-xl text-balance text-base sm:text-lg leading-relaxed text-muted-foreground dark:text-foreground">
+        <p className="mt-6 max-w-xl  text-center text-balance text-base sm:text-lg leading-relaxed text-muted-foreground dark:text-foreground">
           <Words
-            text="Choose 1–10 posts and a delivery time. Xenith finds the ideas, writes the drafts in your voice, and leaves the final say to you."
+            text="Every day you are not posting, replying, or showing up in the right conversations, someone else in your niche is taking the attention. Xenith gives you the next move before you lose momentum."
             base={PARA_BASE}
             stagger={PARA_STAGGER}
             variants={word}
@@ -167,7 +167,7 @@ export function CTA() {
       {/* Tweet-card row — one card on mobile; from sm up the full row is
           edge-faded so the cards bleed off the sides. */}
       <div className="mt-12 sm:[mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
-        <div className="flex items-stretch justify-center gap-4 overflow-x-auto pb-2">
+        <div className="flex items-stretch justify-center gap-4 overflow-x-hidden pb-2">
           {DRAFTS.map((draft, i) => (
             <motion.div
               key={draft.label}
@@ -187,7 +187,7 @@ export function CTA() {
         className="relative z-2 mt-12 flex flex-col items-center gap-3"
       >
         <Button size="lg" nativeButton={false} render={<Link href="/register" />}>
-          Create tomorrow&apos;s posts
+         Start my X growth system
           <IconSparkles data-icon="inline-end" aria-hidden />
         </Button>
        

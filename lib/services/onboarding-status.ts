@@ -1,8 +1,10 @@
-export type OnboardingStatusSteps = {
-  preferences: boolean;
-  xAccount: boolean;
-  styleProfile: boolean;
-};
+import {
+  fetchUserRequirementsStatus,
+  requirementStepsFromStatus,
+  type UserRequirementSteps,
+} from "@/lib/services/user-requirements";
+
+export type OnboardingStatusSteps = UserRequirementSteps;
 
 export type OnboardingStatus = {
   completed: boolean;
@@ -17,21 +19,18 @@ export type OnboardingStatusResult =
 export async function fetchOnboardingStatus(
   accessToken: string,
 ): Promise<OnboardingStatusResult> {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_URL}/api/v1/user/onboarding-status`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
-      },
-    );
-    if (res.status === 401) return { kind: "unauthorized" };
-    if (!res.ok) return { kind: "error" };
-    const data = (await res.json()) as OnboardingStatus;
-    return { kind: "ok", data };
-  } catch {
-    return { kind: "error" };
-  }
+  const result = await fetchUserRequirementsStatus(accessToken);
+
+  if (result.kind === "unauthorized") return result;
+  if (result.kind === "error") return { kind: "error" };
+
+  return {
+    kind: "ok",
+    data: {
+      completed: result.data.onboarding.completed,
+      steps: requirementStepsFromStatus(result.data),
+    },
+  };
 }
 
 // Maps an incomplete onboarding state to the step the user should resume on.

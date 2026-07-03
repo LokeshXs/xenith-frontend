@@ -7,9 +7,10 @@ import { toast } from "sonner";
 import {
   createCheckout,
   fetchBillingStatus,
-  type BillingStatus,
   type BillingPlan,
+  type BillingSubscriptionStatus,
 } from "@/lib/services/billing";
+import type { UserRequirementsStatus } from "@/lib/services/user-requirements";
 import {
   CreatorPlanCard,
   type CreatorBillingCycle,
@@ -26,12 +27,12 @@ import {
 
 type OnboardingBillingGateProps = {
   accessToken: string;
-  initialBillingStatus: BillingStatus;
+  initialSubscription: UserRequirementsStatus["requirements"]["subscription"];
 };
 
 export function OnboardingBillingGate({
   accessToken,
-  initialBillingStatus,
+  initialSubscription,
 }: OnboardingBillingGateProps) {
   const [billing, setBilling] = useState<CreatorBillingCycle>("monthly");
   const [status, setStatus] = useState<"unpaid" | "checking" | "error">(
@@ -93,31 +94,7 @@ export function OnboardingBillingGate({
     [accessToken, loadStatus],
   );
 
-  const copy =
-    initialBillingStatus.status === "expired"
-      ? {
-          title: "Your subscription has expired",
-          description: "Choose a Creator plan to reactivate your workspace.",
-        }
-      : initialBillingStatus.status === "cancelled"
-        ? {
-            title: "Your subscription is cancelled",
-            description: "Choose a Creator plan to reactivate your workspace.",
-          }
-        : initialBillingStatus.status === "on_hold"
-          ? {
-              title: "Your subscription is on hold",
-              description: "Choose a Creator plan to restore access to your workspace.",
-            }
-      : initialBillingStatus.status === "failed"
-        ? {
-            title: "Your payment couldn't be completed",
-            description: "Choose a Creator plan to restore access to your workspace.",
-          }
-        : {
-            title: "Activate your workspace",
-            description: "Choose your Creator plan to continue onboarding.",
-          };
+  const copy = billingGateCopy(initialSubscription.status);
 
   if (status === "checking") {
     return (
@@ -163,6 +140,52 @@ export function OnboardingBillingGate({
       />
     </div>
   );
+}
+
+function billingGateCopy(status: BillingSubscriptionStatus): {
+  title: string;
+  description: string;
+} {
+  if (status === "expired") {
+    return {
+      title: "Your subscription has expired",
+      description: "Choose a Creator plan to reactivate your workspace.",
+    };
+  }
+
+  if (status === "cancelled") {
+    return {
+      title: "Your subscription is cancelled",
+      description: "Choose a Creator plan to reactivate your workspace.",
+    };
+  }
+
+  if (status === "on_hold") {
+    return {
+      title: "Your subscription is on hold",
+      description: "Choose a Creator plan to restore access to your workspace.",
+    };
+  }
+
+  if (status === "failed") {
+    return {
+      title: "Your payment couldn't be completed",
+      description: "Choose a Creator plan to restore access to your workspace.",
+    };
+  }
+
+  if (status === "pending") {
+    return {
+      title: "Your subscription is still activating",
+      description:
+        "If payment is complete, try again shortly. You can also choose a plan to continue.",
+    };
+  }
+
+  return {
+    title: "Activate your workspace",
+    description: "Choose your Creator plan to continue onboarding.",
+  };
 }
 
 function OnboardingStateCard({

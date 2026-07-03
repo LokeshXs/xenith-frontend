@@ -4,8 +4,8 @@ import { redirect } from 'next/navigation'
 
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { BackendStatusGate } from '@/components/backend-status-gate'
-import { fetchBillingStatus } from '@/lib/services/billing'
-import { fetchOnboardingStatus } from '@/lib/services/onboarding-status'
+import { checkBackendHealth } from '@/lib/services/health'
+import { fetchUserRequirementsStatus } from '@/lib/services/user-requirements'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { DashboardSidebar } from './components/DashboardSidebar'
 import { DashboardMobileHeader } from './components/DashboardMobileHeader'
@@ -30,24 +30,18 @@ export default async function DashboardLayout({
 
   if (!session?.access_token) redirect('/login?redirectTo=%2Fdashboard')
 
-  const [onboarding, billing] = await Promise.all([
-    fetchOnboardingStatus(session.access_token),
-    fetchBillingStatus(session.access_token),
-  ])
-  if (billing.kind === 'unauthorized' || onboarding.kind === 'unauthorized')
-    redirect('/signout')
-  if (billing.kind === 'error' || onboarding.kind === 'error') {
+  if (!(await checkBackendHealth())) {
+    return <BackendStatusGate />
+  }
+
+  const requirements = await fetchUserRequirementsStatus(session.access_token)
+
+  if (requirements.kind === 'unauthorized') redirect('/signout')
+  if (requirements.kind === 'error') {
     redirect('/onboarding')
   }
 
-  const hasRequiredOnboardingState =
-    onboarding.data.steps.preferences &&
-    onboarding.data.steps.xAccount &&
-    onboarding.data.steps.styleProfile
-  const hasActiveSubscription =
-    billing.data.has_access && billing.data.status === 'active'
-
-  if (!hasRequiredOnboardingState || !hasActiveSubscription) {
+  if (!requirements.data.ready) {
     redirect('/onboarding')
   }
 
@@ -57,15 +51,13 @@ export default async function DashboardLayout({
   const defaultOpen = cookieStore.get('sidebar_state')?.value !== 'false'
 
   return (
-    <BackendStatusGate>
-      <SidebarProvider defaultOpen={defaultOpen}>
-        <DashboardSidebar />
-        <SidebarInset>
-          <TwitterConnectGate />
-          <DashboardMobileHeader />
-          {children}
-        </SidebarInset>
-      </SidebarProvider>
-    </BackendStatusGate>
+    <SidebarProvider defaultOpen={defaultOpen}>
+      <DashboardSidebar />
+      <SidebarInset>
+        <TwitterConnectGate />
+        <DashboardMobileHeader />
+        {children}
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

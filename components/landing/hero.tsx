@@ -49,7 +49,7 @@ export function Hero() {
           variants={item}
           className="mt-10 text-xs font-semibold uppercase tracking-[0.2em] text-primary"
         >
-          1–10 ready-to-post drafts, every day
+          Your X growth system
         </motion.p>
 
         <motion.h1
@@ -80,7 +80,7 @@ export function Hero() {
             Create my first post
             <IconSparkles data-icon="inline-end" aria-hidden />
           </Button>
-         
+       
         </motion.div>
       </motion.div>
 

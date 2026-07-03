@@ -26,9 +26,9 @@ const CONTACT_INFO: {
     icon: MailIcon,
   },
   {
-    label: 'X (Twitter)',
-    value: '@xenith_ai',
-    href: 'https://x.com/xenith_ai',
+    label: 'X',
+    value: '@growwithxenith',
+    href: 'https://x.com/growwithxenith',
     icon: TwitterIcon,
   },
 ]

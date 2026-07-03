@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { getSupabaseServerClient } from "@/lib/supabase/server-client";
 import {
-  fetchOnboardingStatus,
-  resumeStepFromStatus,
-} from "@/lib/services/onboarding-status";
+  fetchUserRequirementsStatus,
+  requirementStepsFromStatus,
+} from "@/lib/services/user-requirements";
 import { fetchOnboardingNicheSuggestions } from "@/lib/services/onboarding-niche-suggestions";
-import { fetchBillingStatus } from "@/lib/services/billing";
 import MultistepForm from "./components/MultistepForm";
 import { BackendStatusGate } from "@/components/backend-status-gate";
+import { checkBackendHealth } from "@/lib/services/health";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { OnboardingStatusError } from "./components/OnboardingStatusError";
 import { OnboardingBillingGate } from "./components/OnboardingBillingGate";
@@ -41,64 +41,50 @@ export default async function Page() {
     redirect("/login");
   }
 
-  const billing = await fetchBillingStatus(session.access_token);
-
-  if (billing.kind === "unauthorized") {
-    // Cookies can't be mutated from an RSC; /signout is a Route Handler that
-    // clears the Supabase session and 307s to /login.
-    redirect("/signout");
+  if (!(await checkBackendHealth())) {
+    return <BackendStatusGate />;
   }
 
-  if (billing.kind === "error") {
-    return (
-      <OnboardingShell>
-        <OnboardingStatusError
-          title="We couldn't check your subscription"
-          description="Retry the access check to continue onboarding."
-        />
-      </OnboardingShell>
-    );
-  }
-
-  const hasActiveSubscription =
-    billing.data.has_access && billing.data.status === "active";
-
-  if (!hasActiveSubscription) {
-    return (
-      <BackendStatusGate>
-        <OnboardingShell>
-          <OnboardingBillingGate
-            accessToken={session.access_token}
-            initialBillingStatus={billing.data}
-          />
-        </OnboardingShell>
-      </BackendStatusGate>
-    );
-  }
-
-  const result = await fetchOnboardingStatus(session.access_token);
+  const result = await fetchUserRequirementsStatus(session.access_token);
 
   if (result.kind === "unauthorized") {
+    // Cookies can't be mutated from an RSC; /signout is a Route Handler that
+    // clears the Supabase session and 307s to /login.
     redirect("/signout");
   }
 
   if (result.kind === "error") {
     return (
       <OnboardingShell>
-        <OnboardingStatusError />
+        <OnboardingStatusError
+          title="We couldn't check your setup status"
+          description="Retry the status check to continue onboarding."
+        />
       </OnboardingShell>
     );
   }
 
-  if (result.data.completed) {
+  if (result.data.ready) {
     redirect("/dashboard");
   }
 
-  const initialStep = resumeStepFromStatus(result.data.steps);
+  if (!result.data.requirements.subscription.satisfied) {
+    return (
+      <OnboardingShell>
+        <OnboardingBillingGate
+          accessToken={session.access_token}
+          initialSubscription={result.data.requirements.subscription}
+        />
+      </OnboardingShell>
+    );
+  }
+
+  const statusSteps = requirementStepsFromStatus(result.data);
+  const initialStep = result.data.onboarding.resumeStep;
   const shouldHydrateNicheSuggestions =
-    result.data.steps.xAccount &&
-    result.data.steps.styleProfile &&
-    !result.data.steps.preferences;
+    statusSteps.xAccount &&
+    statusSteps.styleProfile &&
+    !statusSteps.preferences;
 
   const nicheSuggestions = shouldHydrateNicheSuggestions
     ? await fetchOnboardingNicheSuggestions(session.access_token)
@@ -120,15 +106,13 @@ export default async function Page() {
   }
 
   return (
-    <BackendStatusGate>
-      <OnboardingShell>
-        <MultistepForm
-          initialStep={initialStep}
-          statusSteps={result.data.steps}
-          initialSuggestedNiches={nicheSuggestions?.data.suggestedNiches ?? []}
-          initialSelectedNiches={nicheSuggestions?.data.preselectedNiches ?? []}
-        />
-      </OnboardingShell>
-    </BackendStatusGate>
+    <OnboardingShell>
+      <MultistepForm
+        initialStep={initialStep}
+        statusSteps={statusSteps}
+        initialSuggestedNiches={nicheSuggestions?.data.suggestedNiches ?? []}
+        initialSelectedNiches={nicheSuggestions?.data.preselectedNiches ?? []}
+      />
+    </OnboardingShell>
   );
 }

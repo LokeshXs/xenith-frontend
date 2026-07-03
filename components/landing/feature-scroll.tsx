@@ -27,7 +27,7 @@ const CARDS: FeatureCard[] = [
   {
     index: "01",
     eyebrow: "Your daily drafts",
-    title: "Get 1–10 posts at the time you choose.",
+    title: "Get posts at the time you choose.",
     description:
       "Choose your topics, voice, and delivery time once. Xenith turns what's working in your niche into posts ready for you to review.",
   },
@@ -171,7 +171,7 @@ function FeatureCardContent({ card }: { card: FeatureCard }) {
         <p className="mt-6 text-xs drop-shadow-xs  font-semibold uppercase tracking-[0.2em] opacity-70">
           {card.eyebrow}
         </p>
-        <h2 className="mt-4 text-balance drop-shadow-sm  text-xl font-semibold tracking-tight sm:text-5xl">
+        <h2 className="mt-4 text-balance drop-shadow-sm  text-xl font-semibold tracking-tight sm:text-5xl max-w-2xl">
           {card.title}
         </h2>
         <p className="mt-5 max-w-xl drop-shadow-sm  text-balance text-sm sm:text-lg leading-relaxed opacity-80">

@@ -1,10 +1,5 @@
 import Link from "next/link"
-import {
-  IconBrandDiscord,
-  IconBrandGithub,
-  IconBrandLinkedin,
-  IconBrandTwitter,
-} from "@tabler/icons-react"
+import { IconBrandX } from "@tabler/icons-react"
 
 import { XenithLogo } from "@/components/brand/xenith-logo"
 import { BrandWatermark } from "./brand-watermark"
@@ -22,10 +17,7 @@ const LINKS: FooterLink[] = [
 ]
 
 const SOCIALS = [
-  { label: "X", href: "#", icon: IconBrandTwitter },
-  { label: "LinkedIn", href: "#", icon: IconBrandLinkedin },
-  { label: "GitHub", href: "#", icon: IconBrandGithub },
-  { label: "Discord", href: "#", icon: IconBrandDiscord },
+  { label: "X", href: "https://x.com/growwithxenith", icon: IconBrandX },
 ]
 
 const linkClasses =
@@ -50,7 +42,7 @@ function FooterLink({ label, href, external }: FooterLink) {
 export function Footer() {
   return (
     <footer className="relative overflow-hidden ">
-      <div className="container relative z-10 mx-auto px-4 pt-16 pb-[9vw] sm:px-12">
+      <div className="container relative z-10 mx-auto px-4 pt-16 pb-[max(9vw,8rem)] sm:px-12">
         {/* Centered logo */}
         <div className="flex justify-center">
           <XenithLogo />
@@ -70,7 +62,7 @@ export function Footer() {
 
         {/* Bottom bar: copyright left, socials right */}
         <div className="mt-6 sm:mt-12 flex flex-col max-sm:flex-col-reverse items-center gap-4 sm:flex-row sm:justify-between">
-          <p className="text-sm text-muted-foreground">
+          <p className="hidden text-sm text-muted-foreground sm:block">
             © Xenith 2026. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
@@ -88,6 +80,24 @@ export function Footer() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="absolute bottom-4 left-1/2 z-20 flex h-16 w-80 max-w-[calc(100%-2rem)] -translate-x-1/2 flex-col items-center justify-center sm:h-12">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.8),rgba(255,255,255,0)_72%)]" />
+        <p className="relative text-center text-sm text-muted-foreground">
+          Made by{" "}
+          <a
+            href="https://x.com/ShipItLokesh"
+            target="_blank"
+            rel="noreferrer"
+            className="rounded font-medium text-primary/80 outline-none transition-colors hover:text-primary focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            @shipitlokesh
+          </a>
+        </p>
+        <p className="relative mt-1 text-center text-xs text-muted-foreground sm:hidden">
+          © Xenith 2026. All rights reserved.
+        </p>
       </div>
 
       {/* Giant brand watermark, cropped at the bottom edge */}

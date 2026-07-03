@@ -14,7 +14,7 @@ import { validateCurrentStep } from "../utils/formValidators";
 import { getErrorMessage } from "../utils/getErrorMessage";
 import { saveUserPreferences } from "@/lib/services/preferences";
 import type { FormStep } from "../context/FormContext";
-import type { OnboardingStatusSteps } from "@/lib/services/onboarding-status";
+import type { UserRequirementSteps } from "@/lib/services/user-requirements";
 
 // Define the form steps
 const FORM_STEPS: FormStep[] = [
@@ -49,7 +49,7 @@ const FORM_STEPS: FormStep[] = [
 
 type MultistepFormProps = {
   initialStep?: number;
-  statusSteps?: OnboardingStatusSteps;
+  statusSteps?: UserRequirementSteps;
   initiallyComplete?: boolean;
   initialSuggestedNiches?: string[];
   initialSelectedNiches?: string[];

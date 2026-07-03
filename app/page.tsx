@@ -6,6 +6,7 @@ import { VideoDemo } from "@/components/landing/video-demo"
 import { FeatureScroll } from "@/components/landing/feature-scroll"
 import { BentoGrid } from "@/components/landing/bento-grid"
 import { Pricing } from "@/components/landing/pricing"
+import { Testimonials } from "@/components/landing/testimonials"
 import { CTA } from "@/components/landing/cta"
 import { Footer } from "@/components/landing/footer"
 import { siteConfig } from "@/lib/seo/config"
@@ -24,7 +25,7 @@ const jsonLd = {
       "@id": `${siteConfig.url}/#organization`,
       name: siteConfig.name,
       url: siteConfig.url,
-      logo: `${siteConfig.url}/opengraph-image`,
+      logo: `${siteConfig.url}/open-graph.png`,
     },
     {
       "@type": "SoftwareApplication",
@@ -58,6 +59,7 @@ export default function Home() {
         <FeatureScroll />
         <BentoGrid />
         <Pricing />
+        <Testimonials />
         <CTA />
       </main>
       <Footer />

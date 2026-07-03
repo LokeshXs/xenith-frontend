@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import type { OnboardingStatusSteps } from '@/lib/services/onboarding-status';
+import type { UserRequirementSteps } from '@/lib/services/user-requirements';
 
 /**
  * Shape of the onboarding form data collected across the steps.
@@ -37,7 +37,7 @@ export interface FormContextType {
   // Onboarding-status snapshot from the server. Steps can branch their UI on this
   // (e.g. ConnectXStep renders the "analyze posts" variant when xAccount is true
   // but styleProfile is false).
-  statusSteps?: OnboardingStatusSteps;
+  statusSteps?: UserRequirementSteps;
 
   // Form data management
   formData: FormData;
@@ -74,7 +74,7 @@ export function FormProvider({
   steps: FormStep[];
   initialData: FormData;
   initialStep?: number;
-  statusSteps?: OnboardingStatusSteps;
+  statusSteps?: UserRequirementSteps;
 }) {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [formData, setFormData] = useState<FormData>(initialData);
