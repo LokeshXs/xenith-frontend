@@ -1,10 +1,25 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { IconCheck, IconPlus, IconX } from '@tabler/icons-react'
+import {
+  IconCalendar,
+  IconCheck,
+  IconCreditCard,
+  IconLoader2,
+  IconPlus,
+  IconX,
+} from '@tabler/icons-react'
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -20,9 +35,15 @@ import {
   updateUserPreferences,
   type UserPreferences,
 } from '@/lib/services/preferences'
-import type { ReplyCreditSummary } from '@/lib/services/billing'
+import {
+  cancelSubscription,
+  type BillingPlan,
+  type BillingStatus,
+  type BillingSubscriptionStatus,
+} from '@/lib/services/billing'
 import { isAxiosError } from 'axios'
 import { CREATOR_PLAN_LIMITS } from '@/lib/plan-limits'
+import { useAuth } from '@/context/AuthContext'
 
 const POSTS_PER_DAY_OPTIONS = Array.from(
   { length: CREATOR_PLAN_LIMITS.maxPostsPerDay },
@@ -40,6 +61,22 @@ const REPLY_COUNT_OPTIONS = [
   { value: '5', label: '5 replies' },
   { value: '10', label: '10 replies' },
 ] as const
+
+const PLAN_DETAILS = {
+  creator: {
+    name: 'Creator Monthly',
+    price: '$24 / month',
+    cadence: 'Billed monthly',
+  },
+  'creator-yearly': {
+    name: 'Creator Yearly',
+    price: '$20 / month',
+    cadence: 'Billed annually',
+  },
+} as const satisfies Record<
+  BillingPlan,
+  { name: string; price: string; cadence: string }
+>
 
 const USERNAME_REGEX = /^[A-Za-z0-9_]{1,15}$/
 
@@ -96,7 +133,7 @@ function Chip({ label, selected, onClick, disabled = false }: ChipProps) {
   )
 }
 
-function formatCreditDate(value: string | null) {
+function formatDate(value: string | null) {
   if (!value) return null
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return null
@@ -107,20 +144,90 @@ function formatCreditDate(value: string | null) {
   }).format(date)
 }
 
+function planName(plan: BillingPlan | null) {
+  return plan ? PLAN_DETAILS[plan].name : 'Free'
+}
+
+function planPrice(plan: BillingPlan | null) {
+  return plan ? PLAN_DETAILS[plan].price : '$0'
+}
+
+function planCadence(plan: BillingPlan | null) {
+  return plan ? PLAN_DETAILS[plan].cadence : 'No active subscription'
+}
+
+function statusLabel(
+  status: BillingSubscriptionStatus,
+  hasAccess: boolean,
+  cancelAtPeriodEnd: boolean,
+) {
+  if (cancelAtPeriodEnd && hasAccess) return 'Cancelled'
+  if (status === 'free') return 'Free'
+  return status
+    .split('_')
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ')
+}
+
+function billingDateTileLabel(billing: BillingStatus) {
+  if (billing.cancel_at_period_end) {
+    return billing.is_trialing ? 'Trial cancelled' : 'Subscription cancelled'
+  }
+  if (billing.is_trialing) return 'Free trial'
+  return 'Next billing'
+}
+
+function trialCountdownLabel(billing: BillingStatus) {
+  if (!billing.is_trialing || billing.trial_days_remaining === null) return null
+  const days = billing.trial_days_remaining
+  return `Free trial ends in ${days} day${days === 1 ? '' : 's'}`
+}
+
+function periodLabel(billing: BillingStatus) {
+  const trialEndDate = formatDate(billing.trial_ends_at)
+  const endDate = formatDate(billing.access_expires_at ?? billing.next_billing_date)
+  const renewalDate = formatDate(billing.next_billing_date ?? billing.access_expires_at)
+
+  if (billing.is_trialing) {
+    if (billing.cancel_at_period_end) {
+      return trialEndDate ? `Trial access ends on ${trialEndDate}` : 'Trial access ends soon'
+    }
+    return trialEndDate ? `Trial ends on ${trialEndDate}` : 'Trial ends soon'
+  }
+
+  if (billing.cancel_at_period_end) {
+    return endDate ? `Ends on ${endDate}` : 'Ends at the end of your billing period'
+  }
+
+  if (billing.has_access) {
+    return renewalDate
+      ? `Renews on ${renewalDate}`
+      : 'Renews with your next billing period'
+  }
+
+  if (billing.status === 'expired' || billing.status === 'cancelled') {
+    return endDate ? `Ended on ${endDate}` : 'Subscription ended'
+  }
+
+  return 'No renewal scheduled'
+}
+
 type SettingsFormProps = {
   initialPreferences: UserPreferences
   // Full list of niche options to render — comes entirely from the API. When
   // empty we show an error in the Niche section rather than a hardcoded list.
   suggestedNiches: string[]
-  replyCredits: ReplyCreditSummary | null
+  billingStatus: BillingStatus | null
 }
 
 export function SettingsForm({
   initialPreferences,
   suggestedNiches,
-  replyCredits,
+  billingStatus,
 }: SettingsFormProps) {
+  const { session } = useAuth()
   const [prefs, setPrefs] = useState<UserPreferences>(initialPreferences)
+  const [billing, setBilling] = useState<BillingStatus | null>(billingStatus)
   // Baseline we diff against for the dirty state. Re-set after a successful
   // save so the dirty bar hides and the next edit is detected correctly.
   const [baseline, setBaseline] = useState<UserPreferences>(initialPreferences)
@@ -129,6 +236,10 @@ export function SettingsForm({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [savedAt, setSavedAt] = useState<number | null>(null)
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
+  const [cancelConfirmation, setCancelConfirmation] = useState('')
+  const [cancelling, setCancelling] = useState(false)
+  const [cancelError, setCancelError] = useState('')
   const minNiches = CREATOR_PLAN_LIMITS.minNiches
   const maxNiches = CREATOR_PLAN_LIMITS.maxNiches
   const minInspirationAccounts = CREATOR_PLAN_LIMITS.minInspirationAccounts
@@ -283,13 +394,45 @@ export function SettingsForm({
     setDraftAccount('')
   }
 
+  const handleCancelSubscription = async () => {
+    if (cancelConfirmation !== 'cancel') return
+    const accessToken = session?.access_token
+    if (!accessToken) {
+      setCancelError('Your session expired. Please sign in again.')
+      return
+    }
+
+    setCancelling(true)
+    setCancelError('')
+    const result = await cancelSubscription(accessToken)
+    setCancelling(false)
+
+    if (result.kind === 'ok') {
+      setBilling(result.data)
+      setCancelDialogOpen(false)
+      setCancelConfirmation('')
+      return
+    }
+
+    if (result.kind === 'unauthorized') {
+      window.location.assign('/login')
+      return
+    }
+
+    setCancelError(result.message)
+  }
+
+  const replyCredits = billing?.reply_credits ?? null
   const usedPercent = replyCredits?.period_granted
     ? Math.min(
         100,
         Math.max(0, (replyCredits.period_used / replyCredits.period_granted) * 100),
       )
     : 0
-  const renewalDate = formatCreditDate(replyCredits?.period_ends_at ?? null)
+  const renewalDate = formatDate(replyCredits?.period_ends_at ?? null)
+  const canCancelSubscription =
+    Boolean(billing?.has_access) && !billing?.cancel_at_period_end
+  const trialLabel = billing ? trialCountdownLabel(billing) : null
 
   return (
     <div className="relative pb-28">
@@ -507,6 +650,107 @@ export function SettingsForm({
             </Select>
           </div>
         </Section>
+
+        <Section
+          title="Plan details"
+          description="Your subscription, renewal, and cancellation status."
+        >
+          {billing ? (
+            <div className="flex flex-col gap-5 rounded-lg border border-border bg-background p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex flex-col gap-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-lg font-semibold tracking-tight">
+                      {planName(billing.plan)}
+                    </h3>
+                    <Badge
+                      variant={billing.has_access ? 'default' : 'secondary'}
+                      className="capitalize"
+                    >
+                      {statusLabel(
+                        billing.status,
+                        billing.has_access,
+                        billing.cancel_at_period_end,
+                      )}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {planCadence(billing.plan)}
+                  </p>
+                  {trialLabel && (
+                    <p className="text-sm font-medium text-foreground">
+                      {trialLabel}
+                    </p>
+                  )}
+                </div>
+
+                <div className="flex flex-col gap-1 text-left sm:text-right">
+                  <span className="text-2xl font-semibold tabular-nums">
+                    {planPrice(billing.plan)}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {periodLabel(billing)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex items-start gap-3 rounded-lg bg-muted/45 p-3">
+                  <IconCalendar className="mt-0.5 size-4 text-muted-foreground" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">
+                      {billingDateTileLabel(billing)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {periodLabel(billing)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3 rounded-lg bg-muted/45 p-3">
+                  <IconCreditCard className="mt-0.5 size-10 text-muted-foreground" />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-sm font-medium">Billing details</span>
+                    <span className="text-sm text-muted-foreground">
+                      Payment method and invoices are managed by Dodo Payments.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {billing.cancel_at_period_end ? (
+                <p className="rounded-lg border border-border bg-muted/35 px-3 py-2 text-sm text-muted-foreground">
+                  {billing.is_trialing
+                    ? "Your trial is cancelled. You won't be charged. You can keep using Xenith until your trial access ends."
+                    : "Your subscription is cancelled. You won't be charged again. You can keep using Xenith until your access ends."}
+                </p>
+              ) : canCancelSubscription ? (
+                <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Cancel anytime. Your access stays active until the end of the
+                    paid period.
+                  </p>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => {
+                      setCancelError('')
+                      setCancelConfirmation('')
+                      setCancelDialogOpen(true)
+                    }}
+                    className="sm:w-fit"
+                  >
+                    Cancel subscription
+                  </Button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Plan details are unavailable right now.
+            </p>
+          )}
+        </Section>
       </div>
 
       <div
@@ -557,6 +801,68 @@ export function SettingsForm({
           Preferences saved
         </div>
       )}
+
+      <Dialog
+        open={cancelDialogOpen}
+        onOpenChange={(open) => {
+          if (cancelling) return
+          setCancelDialogOpen(open)
+          if (!open) {
+            setCancelConfirmation('')
+            setCancelError('')
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel subscription</DialogTitle>
+            <DialogDescription>
+              Type cancel to schedule your subscription to end at the close of
+              the current billing period.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="cancel-confirmation">Confirmation word</Label>
+            <Input
+              id="cancel-confirmation"
+              value={cancelConfirmation}
+              onChange={(event) => {
+                setCancelConfirmation(event.target.value)
+                if (cancelError) setCancelError('')
+              }}
+              placeholder="cancel"
+              autoComplete="off"
+              aria-invalid={!!cancelError}
+            />
+            {cancelError && (
+              <p className="text-sm text-destructive">{cancelError}</p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setCancelDialogOpen(false)}
+              disabled={cancelling}
+            >
+              Keep subscription
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void handleCancelSubscription()}
+              disabled={cancelConfirmation !== 'cancel' || cancelling}
+            >
+              {cancelling && (
+                <IconLoader2 data-icon="inline-start" className="animate-spin" />
+              )}
+              {cancelling ? 'Cancelling…' : 'Cancel subscription'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

@@ -26,7 +26,12 @@ export type BillingStatus = {
   plan: BillingPlan | null
   status: BillingSubscriptionStatus
   has_access: boolean
+  cancel_at_period_end: boolean
+  next_billing_date: string | null
   access_expires_at: string | null
+  trial_ends_at: string | null
+  is_trialing: boolean
+  trial_days_remaining: number | null
   reply_credits: ReplyCreditSummary
 }
 
@@ -39,6 +44,12 @@ export type CheckoutResult =
 export type BillingStatusResult =
   | { kind: "ok"; data: BillingStatus }
   | { kind: "unauthorized" }
+  | { kind: "error"; message: string }
+
+export type CancelSubscriptionResult =
+  | { kind: "ok"; data: BillingStatus }
+  | { kind: "unauthorized" }
+  | { kind: "conflict"; message: string }
   | { kind: "error"; message: string }
 
 function apiUrl(path: string): string {
@@ -127,6 +138,42 @@ export async function fetchBillingStatus(
     return {
       kind: "error",
       message: error instanceof Error ? error.message : "Unable to load billing status",
+    }
+  }
+}
+
+export async function cancelSubscription(
+  accessToken: string,
+): Promise<CancelSubscriptionResult> {
+  try {
+    const response = await fetch(apiUrl("/api/billing/cancel"), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ confirmation: "cancel" }),
+    })
+
+    if (response.status === 401) return { kind: "unauthorized" }
+    if (response.status === 409) {
+      return {
+        kind: "conflict",
+        message: await errorMessage(response, "Subscription cancellation is unavailable"),
+      }
+    }
+    if (!response.ok) {
+      return {
+        kind: "error",
+        message: await errorMessage(response, "Unable to cancel subscription"),
+      }
+    }
+
+    return { kind: "ok", data: (await response.json()) as BillingStatus }
+  } catch (error) {
+    return {
+      kind: "error",
+      message: error instanceof Error ? error.message : "Unable to cancel subscription",
     }
   }
 }

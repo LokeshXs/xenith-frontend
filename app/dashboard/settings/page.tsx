@@ -81,7 +81,7 @@ export default async function SettingsPage() {
       <SettingsForm
         initialPreferences={initialPreferences}
         suggestedNiches={suggestedNiches}
-        replyCredits={billing.kind === 'ok' ? billing.data.reply_credits : null}
+        billingStatus={billing.kind === 'ok' ? billing.data : null}
       />
     </div>
   )
