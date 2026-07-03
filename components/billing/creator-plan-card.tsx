@@ -25,8 +25,8 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const
 
 const CREATOR_PLAN = {
   name: "Creator",
-  monthly: 29,
-  yearly: Math.round(29 * 0.8),
+  monthly: 24,
+  yearly: 20,
   blurb: "Everything you need to create consistently and grow on X.",
   features: [
     { label: "10 post drafts per day" },
