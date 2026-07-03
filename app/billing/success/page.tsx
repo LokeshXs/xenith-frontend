@@ -111,11 +111,11 @@ export default function BillingSuccessPage() {
       <Card className="w-full max-w-md text-center">
         <CardHeader className="items-center">
           {checking ? (
-            <IconLoader2 className="size-9 animate-spin text-primary" aria-hidden />
+            <IconLoader2 className="size-9 animate-spin text-primary text-center" aria-hidden />
           ) : state === "pending" ? (
-            <IconCircleCheck className="size-9 text-primary" aria-hidden />
+            <IconCircleCheck className="size-9 text-primary text-center" aria-hidden />
           ) : (
-            <IconAlertCircle className="size-9 text-destructive" aria-hidden />
+            <IconAlertCircle className="size-9 text-destructive text-center" aria-hidden />
           )}
           <CardTitle className="mt-2 text-xl">
             {checking
