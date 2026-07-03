@@ -54,6 +54,14 @@ export function Pricing() {
         return
       }
 
+      if (result.kind === "resumed") {
+        toast.success("Subscription resumed", {
+          description: "Your Creator access will continue.",
+        })
+        window.location.assign(await postAuthAppRoute(session.access_token))
+        return
+      }
+
       if (result.kind === "error") {
         toast.error(result.message)
         return

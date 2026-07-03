@@ -55,7 +55,7 @@ export function OnboardingBillingGate({
       return;
     }
 
-    if (result.data.has_access && result.data.status === "active") {
+    if (result.data.has_access) {
       window.location.reload();
       return;
     }
@@ -78,6 +78,13 @@ export function OnboardingBillingGate({
         }
         if (result.kind === "conflict") {
           await loadStatus();
+          return;
+        }
+        if (result.kind === "resumed") {
+          toast.success("Subscription resumed", {
+            description: "Your Creator access will continue.",
+          });
+          window.location.reload();
           return;
         }
         if (result.kind === "error") {
