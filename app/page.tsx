@@ -25,7 +25,7 @@ const jsonLd = {
       "@id": `${siteConfig.url}/#organization`,
       name: siteConfig.name,
       url: siteConfig.url,
-      logo: `${siteConfig.url}/open-graph.png`,
+      logo: `${siteConfig.url}/opengraph-image.png`,
     },
     {
       "@type": "SoftwareApplication",

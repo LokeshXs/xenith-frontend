@@ -76,6 +76,13 @@ export function DashboardClient({
     })
   }, [posts, sortBy])
 
+  const nextDraftsLabel =
+    posts.length > 0
+      ? deliveryTime
+        ? `Next drafts tomorrow at ${formatTime12(deliveryTime)}`
+        : 'Next drafts are scheduled soon'
+      : null
+
   const anyScored = posts.some((p) => p.engagement_score !== null)
 
   async function handleGenerate() {
@@ -159,7 +166,11 @@ export function DashboardClient({
             Today&rsquo;s posts
           </h1>
 
-       
+          {nextDraftsLabel && (
+            <p className="rounded-full border border-border bg-muted/35 px-3 py-1 text-xs font-medium text-muted-foreground sm:text-sm">
+              {nextDraftsLabel}
+            </p>
+          )}
         </div>
 
         {posts.length > 0 ? (
