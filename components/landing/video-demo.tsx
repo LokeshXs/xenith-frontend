@@ -1,7 +1,6 @@
 "use client"
 
 import { useRef, useState } from "react"
-import Image from "next/image"
 import { IconPlayerPlayFilled } from "@tabler/icons-react"
 import {
   motion,
@@ -11,11 +10,56 @@ import {
   useTransform,
 } from "motion/react"
 
+const DEMO_YOUTUBE_URL = "https://www.youtube.com/watch?v=Aynww6Dhy_w"
+const DEMO_VIDEO_TITLE = "Xenith product demo video"
+
+function getYouTubeVideoId(url: string) {
+  try {
+    const parsed = new URL(url)
+
+    if (parsed.hostname === "youtu.be") {
+      return parsed.pathname.slice(1) || null
+    }
+
+    if (
+      parsed.hostname === "www.youtube.com" ||
+      parsed.hostname === "youtube.com" ||
+      parsed.hostname === "m.youtube.com"
+    ) {
+      if (parsed.pathname === "/watch") {
+        return parsed.searchParams.get("v")
+      }
+
+      if (parsed.pathname.startsWith("/shorts/")) {
+        return parsed.pathname.split("/")[2] || null
+      }
+
+      if (parsed.pathname.startsWith("/embed/")) {
+        return parsed.pathname.split("/")[2] || null
+      }
+    }
+  } catch {
+    return null
+  }
+
+  return null
+}
+
 export function VideoDemo() {
   const sectionRef = useRef<HTMLElement>(null)
-  const videoRef = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
   const reduceMotion = useReducedMotion()
+  const [thumbnailUrl, setThumbnailUrl] = useState(() => {
+    const videoId = getYouTubeVideoId(DEMO_YOUTUBE_URL)
+    return videoId
+      ? `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`
+      : "/demo.png"
+  })
+
+  const videoId = getYouTubeVideoId(DEMO_YOUTUBE_URL)
+  const embedUrl = videoId
+    ? `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`
+    : null
 
   // 0 → section top hits viewport bottom; 1 → section center hits viewport center,
   // so the frame settles flat before the user scrolls past it.
@@ -37,9 +81,8 @@ export function VideoDemo() {
   const opacity = useTransform(scrollYProgress, [0, 0.2], [0, 1])
 
   function handlePlay() {
+    if (!embedUrl) return
     setPlaying(true)
-    // play() rejects while /demo.mp4 is absent — swallow so there's no console noise.
-    videoRef.current?.play().catch(() => {})
   }
 
   return (
@@ -48,8 +91,6 @@ export function VideoDemo() {
       ref={sectionRef}
       className="container relative mx-auto scroll-mt-24 px-4 py-14 sm:px-12 sm:py-28"
     >
-    
-
       {/* Perspective lives on the parent of the rotated node, or the 3D collapses. */}
       <div className="mx-auto max-w-6xl" style={{ perspective: "1200px" }}>
         <motion.div
@@ -81,17 +122,15 @@ export function VideoDemo() {
 
           {/* Video — aspect-video reserves height so there's no layout shift. */}
           <div className="relative aspect-video w-full bg-card">
-            <video
-              ref={videoRef}
-              src="/demo.mp4"
-              poster="/demo.png"
-              preload="none"
-              playsInline
-              controls={playing}
-              aria-label="Xenith product demo video"
-              onError={() => setPlaying(false)}
-              className="size-full object-cover"
-            />
+            {playing && embedUrl && (
+              <iframe
+                src={embedUrl}
+                title={DEMO_VIDEO_TITLE}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                className="size-full"
+              />
+            )}
 
             {!playing && (
               <button
@@ -100,12 +139,12 @@ export function VideoDemo() {
                 aria-label="Play demo video"
                 className="group absolute inset-0 flex items-center justify-center focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
               >
-                <Image
-                  src="/demo.png"
+                {/* eslint-disable-next-line @next/next/no-img-element -- YouTube thumbnails should not require Next image remote config. */}
+                <img
+                  src={thumbnailUrl}
                   alt="Preview of the Xenith app"
-                  fill
-                  sizes="(max-width: 1152px) 100vw, 1152px"
-                  className="object-cover"
+                  className="absolute inset-0 size-full object-cover"
+                  onError={() => setThumbnailUrl("/demo.png")}
                 />
                 {/* Scrim so the play button reads over any poster content. */}
                 <span
