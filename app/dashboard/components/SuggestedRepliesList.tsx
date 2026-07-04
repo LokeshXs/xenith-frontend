@@ -78,6 +78,7 @@ export function SuggestedRepliesList() {
             xAccount: res.xAccount,
             groups: [{ date: todayKey, replies: res.replies }, ...rest],
             reply_generation_limit: res.reply_generation_limit,
+            reply_generation_notice: res.reply_generation_notice,
             pagination: prev?.pagination ?? {
               page: 1,
               limit: 7,
@@ -217,6 +218,12 @@ export function SuggestedRepliesList() {
         <IconClock className="mt-0.5 size-4 shrink-0" />
         <p>{REPLY_GENERATION_TIP}</p>
       </div>
+
+      {data?.reply_generation_notice && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+          {data.reply_generation_notice.message}
+        </div>
+      )}
 
       {generate.isPending ? (
         // Regeneration is slow — replace the replies with skeletons meanwhile.

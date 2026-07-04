@@ -44,6 +44,13 @@ export type ReplyGenerationLimitSummary = {
   timezone: string
 }
 
+export interface ReplyGenerationNotice {
+  type: 'shortage'
+  requested: number
+  generated: number
+  message: string
+}
+
 // Response of GET /api/v1/suggested-replies/generate — used by the dashboard's
 // "Generate suggested replies" action to produce a fresh batch on demand.
 export interface SuggestedRepliesResponse {
@@ -56,6 +63,7 @@ export interface SuggestedRepliesResponse {
   // Current reply-credit balance after this generation request.
   reply_credits: ReplyCreditSummary
   reply_generation_limit: ReplyGenerationLimitSummary
+  reply_generation_notice: ReplyGenerationNotice | null
 }
 
 // One calendar day's worth of replies (newest day first across groups).
@@ -80,4 +88,5 @@ export interface SuggestedRepliesHistoryResponse {
     hasMore: boolean
   }
   reply_generation_limit: ReplyGenerationLimitSummary
+  reply_generation_notice: ReplyGenerationNotice | null
 }
