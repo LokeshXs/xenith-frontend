@@ -34,6 +34,16 @@ export interface SuggestedReply {
   updated_at: string
 }
 
+export type ReplyGenerationLimitSummary = {
+  limited: boolean
+  limit: number | null
+  completed_today: number
+  active_today: number
+  remaining_today: number | null
+  reset_at: string | null
+  timezone: string
+}
+
 // Response of GET /api/v1/suggested-replies/generate — used by the dashboard's
 // "Generate suggested replies" action to produce a fresh batch on demand.
 export interface SuggestedRepliesResponse {
@@ -45,6 +55,7 @@ export interface SuggestedRepliesResponse {
   xAccount: XAccount | null
   // Current reply-credit balance after this generation request.
   reply_credits: ReplyCreditSummary
+  reply_generation_limit: ReplyGenerationLimitSummary
 }
 
 // One calendar day's worth of replies (newest day first across groups).
@@ -68,4 +79,5 @@ export interface SuggestedRepliesHistoryResponse {
     totalDays: number
     hasMore: boolean
   }
+  reply_generation_limit: ReplyGenerationLimitSummary
 }

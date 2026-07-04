@@ -27,7 +27,6 @@ export function AllSuggestedReplies() {
     isError,
     error,
     refetch,
-    isRefetching,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -89,16 +88,6 @@ export function AllSuggestedReplies() {
           All replies
         </h1>
       </div>
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() => refetch()}
-        disabled={isRefetching}
-        className="self-start sm:self-auto"
-      >
-        <IconRefresh className={`size-4 ${isRefetching ? 'animate-spin' : ''}`} />
-        Refresh
-      </Button>
     </header>
   )
 

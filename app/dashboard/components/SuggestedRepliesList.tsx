@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import {
   IconArrowRight,
+  IconClock,
   IconLoader2,
   IconRefresh,
   IconSparkles,
@@ -13,6 +14,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/app/onboarding/utils/getErrorMessage'
 import type {
+  ReplyGenerationLimitSummary,
   SuggestedReply,
   SuggestedRepliesHistoryResponse,
 } from '@/lib/services/suggested-replies'
@@ -26,6 +28,16 @@ import { SuggestedReplyCard } from './SuggestedReplyCard'
 
 // Page 1 of the day-grouped history. The main view shows only the newest day.
 const LATEST_QUERY_KEY = ['suggested-replies', 'history', 1] as const
+const REPLY_GENERATION_TIP =
+  'Tip: Keep about a 5-hour gap between reply generations. Growth on X compounds when you show up consistently, not all at once.'
+
+function limitFromError(err: unknown): ReplyGenerationLimitSummary | null {
+  if (typeof err !== 'object' || err === null) return null
+  const maybe = err as {
+    response?: { data?: { reply_generation_limit?: ReplyGenerationLimitSummary } }
+  }
+  return maybe.response?.data?.reply_generation_limit ?? null
+}
 
 export function SuggestedRepliesList() {
   const queryClient = useQueryClient()
@@ -65,6 +77,7 @@ export function SuggestedRepliesList() {
             timezone: res.timezone,
             xAccount: res.xAccount,
             groups: [{ date: todayKey, replies: res.replies }, ...rest],
+            reply_generation_limit: res.reply_generation_limit,
             pagination: prev?.pagination ?? {
               page: 1,
               limit: 7,
@@ -75,7 +88,27 @@ export function SuggestedRepliesList() {
         },
       )
     },
+    onError: (err) => {
+      const nextLimit = limitFromError(err)
+      if (!nextLimit) return
+      queryClient.setQueryData(
+        LATEST_QUERY_KEY,
+        (prev: SuggestedRepliesHistoryResponse | undefined) =>
+          prev ? { ...prev, reply_generation_limit: nextLimit } : prev,
+      )
+    },
   })
+
+  const effectiveReplyGenerationLimit =
+    limitFromError(generate.error) ?? data?.reply_generation_limit ?? null
+  const isDailyLimitReached =
+    effectiveReplyGenerationLimit?.limited === true &&
+    effectiveReplyGenerationLimit.remaining_today === 0
+  const trialUsageLabel =
+    effectiveReplyGenerationLimit?.limited === true &&
+    effectiveReplyGenerationLimit.limit !== null
+      ? `Trial limit: ${effectiveReplyGenerationLimit.active_today} of ${effectiveReplyGenerationLimit.limit} sessions used today.`
+      : null
 
   // The dashed empty state owns its own Generate button, so the header Refresh
   // is hidden there to avoid two competing triggers.
@@ -87,7 +120,7 @@ export function SuggestedRepliesList() {
       size="sm"
       variant="outline"
       onClick={() => generate.mutate()}
-      disabled={generate.isPending}
+      disabled={generate.isPending || isDailyLimitReached}
       className="self-start sm:self-auto"
     >
       {generate.isPending ? (
@@ -95,6 +128,8 @@ export function SuggestedRepliesList() {
           <IconLoader2 className="size-4 animate-spin" />
           Generating…
         </>
+      ) : isDailyLimitReached ? (
+        'Daily limit reached'
       ) : (
         <>
           <IconRefresh className="size-4" />
@@ -170,8 +205,18 @@ export function SuggestedRepliesList() {
             {showAllButton}
             {!isEmpty && refreshButton}
           </div>
+          {trialUsageLabel && (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1 text-xs text-amber-700 tabular-nums dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
+              {trialUsageLabel}
+            </p>
+          )}
         </div>
       </header>
+
+      <div className="flex items-start gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+        <IconClock className="mt-0.5 size-4 shrink-0" />
+        <p>{REPLY_GENERATION_TIP}</p>
+      </div>
 
       {generate.isPending ? (
         // Regeneration is slow — replace the replies with skeletons meanwhile.
@@ -190,9 +235,14 @@ export function SuggestedRepliesList() {
               'Failed to generate replies. Please try again.',
             )}
           </p>
-          <Button size="sm" variant="outline" onClick={() => generate.mutate()}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => generate.mutate()}
+            disabled={isDailyLimitReached}
+          >
             <IconRefresh className="size-4" />
-            Try again
+            {isDailyLimitReached ? 'Daily limit reached' : 'Try again'}
           </Button>
         </div>
       ) : latest && replies.length > 0 ? (
@@ -218,9 +268,12 @@ export function SuggestedRepliesList() {
         </section>
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
-          <Button onClick={() => generate.mutate()}>
-            <IconSparkles className="size-4" />
-            Generate replies
+          <Button
+            onClick={() => generate.mutate()}
+            disabled={isDailyLimitReached}
+          >
+            {!isDailyLimitReached && <IconSparkles className="size-4" />}
+            {isDailyLimitReached ? 'Daily limit reached' : 'Generate replies'}
           </Button>
           <p className="text-muted-foreground text-sm max-w-sm text-balance">
             No suggested replies yet. Generate a batch and we&rsquo;ll surface
@@ -229,6 +282,7 @@ export function SuggestedRepliesList() {
           </p>
         </div>
       )}
+
     </div>
   )
 }

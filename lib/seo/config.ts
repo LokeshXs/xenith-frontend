@@ -5,7 +5,7 @@
  */
 export const siteConfig = {
   name: "Xenith",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://growwithxenith.com",
+  url:  "https://growwithxenith.com",
   title: "Xenith - AI Growth Engine for X",
   description:
     "Grow faster on X with AI-powered content, replies, engagement insights, and workflow tools built to help creators and teams turn conversations into consistent growth.",
