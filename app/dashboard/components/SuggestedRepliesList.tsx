@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import {
   IconArrowRight,
@@ -7,6 +8,7 @@ import {
   IconLoader2,
   IconRefresh,
   IconSparkles,
+  IconX,
 } from '@tabler/icons-react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -14,6 +16,7 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { getErrorMessage } from '@/app/onboarding/utils/getErrorMessage'
 import type {
+  ReplyGenerationNotice,
   ReplyGenerationLimitSummary,
   SuggestedReply,
   SuggestedRepliesHistoryResponse,
@@ -30,6 +33,8 @@ import { SuggestedReplyCard } from './SuggestedReplyCard'
 const LATEST_QUERY_KEY = ['suggested-replies', 'history', 1] as const
 const REPLY_GENERATION_TIP =
   'Tip: Keep about a 5-hour gap between reply generations. Growth on X compounds when you show up consistently, not all at once.'
+const SHORTAGE_NOTICE_DISMISSED_KEY =
+  'xenith:suggested-replies:shortage-notice-dismissed'
 
 function limitFromError(err: unknown): ReplyGenerationLimitSummary | null {
   if (typeof err !== 'object' || err === null) return null
@@ -39,8 +44,14 @@ function limitFromError(err: unknown): ReplyGenerationLimitSummary | null {
   return maybe.response?.data?.reply_generation_limit ?? null
 }
 
+const isShortageNoticeDismissed = () =>
+  typeof window !== 'undefined' &&
+  window.localStorage.getItem(SHORTAGE_NOTICE_DISMISSED_KEY) === 'true'
+
 export function SuggestedRepliesList() {
   const queryClient = useQueryClient()
+  const [generationNotice, setGenerationNotice] =
+    useState<ReplyGenerationNotice | null>(null)
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: LATEST_QUERY_KEY,
@@ -68,6 +79,11 @@ export function SuggestedRepliesList() {
   const generate = useMutation({
     mutationFn: () => generateSuggestedReplies(),
     onSuccess: (res) => {
+      setGenerationNotice(
+        res.reply_generation_notice && !isShortageNoticeDismissed()
+          ? res.reply_generation_notice
+          : null,
+      )
       const todayKey = todayKeyInTimezone(res.timezone)
       queryClient.setQueryData(
         LATEST_QUERY_KEY,
@@ -78,7 +94,6 @@ export function SuggestedRepliesList() {
             xAccount: res.xAccount,
             groups: [{ date: todayKey, replies: res.replies }, ...rest],
             reply_generation_limit: res.reply_generation_limit,
-            reply_generation_notice: res.reply_generation_notice,
             pagination: prev?.pagination ?? {
               page: 1,
               limit: 7,
@@ -90,6 +105,7 @@ export function SuggestedRepliesList() {
       )
     },
     onError: (err) => {
+      setGenerationNotice(null)
       const nextLimit = limitFromError(err)
       if (!nextLimit) return
       queryClient.setQueryData(
@@ -99,6 +115,11 @@ export function SuggestedRepliesList() {
       )
     },
   })
+
+  const runGenerate = () => {
+    setGenerationNotice(null)
+    generate.mutate()
+  }
 
   const effectiveReplyGenerationLimit =
     limitFromError(generate.error) ?? data?.reply_generation_limit ?? null
@@ -120,7 +141,7 @@ export function SuggestedRepliesList() {
     <Button
       size="sm"
       variant="outline"
-      onClick={() => generate.mutate()}
+      onClick={runGenerate}
       disabled={generate.isPending || isDailyLimitReached}
       className="self-start sm:self-auto"
     >
@@ -219,12 +240,6 @@ export function SuggestedRepliesList() {
         <p>{REPLY_GENERATION_TIP}</p>
       </div>
 
-      {data?.reply_generation_notice && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-          {data.reply_generation_notice.message}
-        </div>
-      )}
-
       {generate.isPending ? (
         // Regeneration is slow — replace the replies with skeletons meanwhile.
         <div className="flex flex-col gap-4">
@@ -245,7 +260,7 @@ export function SuggestedRepliesList() {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => generate.mutate()}
+            onClick={runGenerate}
             disabled={isDailyLimitReached}
           >
             <IconRefresh className="size-4" />
@@ -276,7 +291,7 @@ export function SuggestedRepliesList() {
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center">
           <Button
-            onClick={() => generate.mutate()}
+            onClick={runGenerate}
             disabled={isDailyLimitReached}
           >
             {!isDailyLimitReached && <IconSparkles className="size-4" />}
@@ -287,6 +302,29 @@ export function SuggestedRepliesList() {
             fresh posts from your niche with replies drafted in your voice —
             ready to review, tweak, and post in seconds.
           </p>
+        </div>
+      )}
+
+      {generationNotice && (
+        <div
+          key={`${generationNotice.generated}-${generationNotice.requested}`}
+          className="fixed inset-x-0 bottom-6 z-20 mx-auto flex w-fit max-w-[calc(100vw-2rem)] items-start gap-2 rounded-full border border-border bg-background/90 px-3.5 py-1.5 text-sm text-muted-foreground shadow-md backdrop-blur-md animate-in fade-in-0 slide-in-from-bottom-2 duration-300"
+        >
+          <p className="min-w-0 flex-1">{generationNotice.message}</p>
+          <button
+            type="button"
+            aria-label="Dismiss notice"
+            onClick={() => {
+              window.localStorage.setItem(
+                SHORTAGE_NOTICE_DISMISSED_KEY,
+                'true',
+              )
+              setGenerationNotice(null)
+            }}
+            className="shrink-0 rounded-full p-0.5 text-muted-foreground transition hover:bg-muted hover:text-foreground"
+          >
+            <IconX className="size-4" />
+          </button>
         </div>
       )}
 

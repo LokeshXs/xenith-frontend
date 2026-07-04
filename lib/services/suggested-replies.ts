@@ -88,5 +88,4 @@ export interface SuggestedRepliesHistoryResponse {
     hasMore: boolean
   }
   reply_generation_limit: ReplyGenerationLimitSummary
-  reply_generation_notice: ReplyGenerationNotice | null
 }
