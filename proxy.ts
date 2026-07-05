@@ -16,7 +16,8 @@ const PUBLIC_ROUTES = [
   '/logo-preview',
   '/privacy-policy',
   '/terms-and-conditions',
-  '/open-graph.png',
+  '/opengraph-image.png',
+  '/twitter-image.png'
 ] as const
 
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password'] as const

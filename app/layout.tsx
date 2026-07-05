@@ -8,26 +8,10 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { ThemedToaster } from "@/components/themed-toaster";
 import { QueryProvider } from "@/components/query-provider";
 import { GoogleAnalytics } from "@next/third-parties/google";
-import { Analytics } from "@vercel/analytics/next"
+import { Analytics } from "@vercel/analytics/next";
 import { siteConfig } from "@/lib/seo/config";
 
-const outfit = Outfit({subsets:['latin'],variable:'--font-sans'});
-
-const socialImage = {
-  url: "/opengraph-image.png",
-  width: 1200,
-  height: 630,
-  alt: siteConfig.title,
-  type: "image/png",
-}
-
-const twitterImage = {
-  url: "/twitter-image.png",
-  width: 1200,
-  height: 630,
-  alt: siteConfig.title,
-  type: "image/png",
-}
+const outfit = Outfit({ subsets: ["latin"], variable: "--font-sans" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,21 +35,6 @@ export const metadata: Metadata = {
     index: true,
     follow: true,
   },
-  openGraph: {
-    title: siteConfig.title,
-    description: siteConfig.description,
-    siteName: siteConfig.name,
-    url: siteConfig.url,
-    locale: "en_US",
-    type: "website",
-    images: [socialImage],
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: siteConfig.title,
-    description: siteConfig.description,
-    images: [twitterImage],
-  },
 };
 
 export const viewport: Viewport = {
@@ -84,7 +53,14 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-sans", outfit.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        geistSans.variable,
+        geistMono.variable,
+        "font-sans",
+        outfit.variable,
+      )}
     >
       <head>
         <Script
@@ -108,7 +84,7 @@ export default function RootLayout({
         {process.env.NEXT_PUBLIC_GA_ID && (
           <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
         )}
-        <Analytics/>
+        <Analytics />
       </body>
     </html>
   );
