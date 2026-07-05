@@ -19,29 +19,26 @@ type Testimonial = {
 }
 
 const TESTIMONIALS: Testimonial[] = [
- 
-
- 
   {
     quote:
-      "I wanted a system that helped me sound more consistent, not more automated. Xenith gets close enough that editing feels light.",
-    name: "Noah Patel",
-    role: "Creator operator",
-    initials: "NP",
+      "Xenith gives me a clean starting point every day. As a solo builder, it saves me from staring at a blank composer and helps me stay consistent on X.",
+    name: "Adarsh Yadav",
+    role: "Solo builder · India",
+    initials: "AY",
   },
   {
     quote:
-      "The scheduling workflow is the part I keep coming back to. I can plan tomorrow's posts while the ideas are still fresh.",
-    name: "Sofia Ramirez",
-    role: "Solo SaaS founder",
-    initials: "SR",
+      "I use Xenith to turn product updates and small learnings into posts that sound natural. The drafts feel close to how I would write them myself.",
+    name: "Riya Mehta",
+    role: "Indie maker · India",
+    initials: "RM",
   },
   {
     quote:
-      "Xenith turns research into a usable draft instead of another saved tab. That makes staying visible on X feel manageable.",
-    name: "Evan Carter",
-    role: "Technical creator",
-    initials: "EC",
+      "The biggest win is speed. I can review a few thoughtful drafts, make quick edits, and keep my content queue moving without overthinking it.",
+    name: "Marcus Reed",
+    role: "SaaS founder · United States",
+    initials: "MR",
   },
 ]
 

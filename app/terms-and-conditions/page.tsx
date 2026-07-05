@@ -75,11 +75,11 @@ const billingItems = [
   "Xenith may change plan features, pricing, limits, credit rules, and billing intervals prospectively.",
   "Checkout, payment methods, invoices, taxes, and payment processing are handled by Dodo Payments.",
   "Dodo Payments' buyer terms may apply to transactions.",
-  "Starting a trial or subscription authorizes applicable charges after the trial or renewal period unless you cancel.",
-  "Trial availability, length, pricing, and eligibility may change.",
+  "Starting a subscription authorizes applicable recurring charges unless you cancel.",
+  "Any legacy trial access previously granted by Xenith may remain subject to its original trial length, eligibility, and limits.",
   "You can cancel anytime from settings where cancellation is available.",
-  "Cancellation schedules the subscription to end at the close of the current trial or paid billing period.",
-  "Access generally remains active until the end of the current trial or paid period, unless your account is terminated for violation of these Terms.",
+  "Cancellation schedules the subscription to end at the close of the current billing period or any applicable legacy trial access period.",
+  "Access generally remains active until the end of the current paid period or applicable legacy trial access period, unless your account is terminated for violation of these Terms.",
   "Refund requests are reviewed case by case through support, with no guaranteed refund except where required by law or where Dodo Payments separately determines a refund is required or appropriate.",
   "Failed, disputed, reversed, or overdue payments may cause access to be paused, downgraded, or terminated.",
 ]
@@ -181,7 +181,7 @@ export default function Page() {
             These Terms and Conditions govern your access to and use of Xenith,
             an AI growth engine for X that helps users generate posts, suggested
             replies, engagement insights, and publishing workflows. By creating
-            an account, connecting X, starting a trial, subscribing, or using
+            an account, connecting X, subscribing, or using
             Xenith, you agree to these Terms.
           </p>
         </div>

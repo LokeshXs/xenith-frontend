@@ -169,10 +169,10 @@ export function CreatorPlanCard({
             {isSubmitting && (
               <IconLoader2 data-icon="inline-start" className="animate-spin" />
             )}
-            {isSubmitting ? "Opening checkout…" : "Start 3-day free trial"}
+            {isSubmitting ? "Opening checkout…" : "Subscribe now"}
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            No charge for 3 days · cancel anytime
+            Cancel anytime
           </p>
         </CardFooter>
       </Card>

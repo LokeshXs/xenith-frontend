@@ -15,7 +15,7 @@ const collectedItems = [
   "User preferences, including niches, inspiration accounts, posting and reply settings, delivery time, and timezone.",
   "Generated content and workflow data, including generated posts, drafts, hashtags, scheduled or published status, generated replies, edits, feature requests, and blocked accounts.",
   "Public X data used for recommendations, including public posts, liked-post signals, source post metadata, public metrics, and profile images.",
-  "Billing and subscription data, including Dodo customer and subscription identifiers, plan, status, billing dates, and trial data. Payment details are handled by Dodo Payments.",
+  "Billing and subscription data, including Dodo customer and subscription identifiers, plan, status, billing dates, and any legacy trial data. Payment details are handled by Dodo Payments.",
   "Support and communication data, including messages you send us and transactional email records.",
   "Usage, device, log, and analytics data, including IP address, browser or device information, pages and features used, analytics events, and rate-limit or security logs.",
 ]
@@ -30,7 +30,7 @@ const usageItems = [
   "Provide, maintain, and secure your account.",
   "Connect to X and publish or schedule content where you authorize us to do so.",
   "Generate posts, suggested replies, profile and style insights, engagement scores, and niche suggestions.",
-  "Operate billing, trials, subscriptions, credits, and transactional emails.",
+  "Operate billing, subscriptions, credits, legacy trial records, and transactional emails.",
   "Provide support and respond to your requests.",
   "Improve product quality, understand feature usage, and troubleshoot issues.",
   "Prevent abuse, fraud, unauthorized access, and misuse of the service.",
