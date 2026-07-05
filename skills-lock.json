@@ -12,6 +12,12 @@
       "skillPath": "skills/fixing-metadata/SKILL.md",
       "computedHash": "699e13890fb50acffa02dfd2d5b0e719bd916a9e2b7e6035bdc4513fc73d9174"
     },
+    "privacy-policy": {
+      "source": "phuryn/pm-skills",
+      "sourceType": "github",
+      "skillPath": "pm-toolkit/skills/privacy-policy/SKILL.md",
+      "computedHash": "b7de21713e3b59e8a152b47135f4a501e8ecf22e5e550dc64937f18ced7e6eae"
+    },
     "shadcn": {
       "source": "shadcn/ui",
       "sourceType": "github",

@@ -14,6 +14,8 @@ const LINKS: FooterLink[] = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
   { label: "Demo", href: "#demo" },
+  { label: "Privacy", href: "/privacy-policy" },
+  { label: "Terms", href: "/terms-and-conditions" },
 ]
 
 const SOCIALS = [

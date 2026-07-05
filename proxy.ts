@@ -14,6 +14,8 @@ const PUBLIC_ROUTES = [
   '/error',
   '/soon',
   '/logo-preview',
+  '/privacy-policy',
+  '/terms-and-conditions',
   '/open-graph.png',
 ] as const
 
