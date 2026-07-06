@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { IconSparkles } from "@tabler/icons-react";
+import { IconRosetteDiscountCheck, IconSparkles } from "@tabler/icons-react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 import { Button } from "@/components/ui/button";
+import { CREATOR_TRIAL_POPUP_OPEN_EVENT } from "@/components/landing/creator-trial-popup";
 import { HeroShowcase } from "./showcase/hero-showcase";
 import Image from "next/image";
 
@@ -13,6 +14,10 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export function Hero() {
   const reduceMotion = useReducedMotion();
+
+  function openCreatorTrialPopup() {
+    window.dispatchEvent(new Event(CREATOR_TRIAL_POPUP_OPEN_EVENT));
+  }
 
   // Movement is dropped under reduced-motion; only opacity remains.
   const container: Variants = {
@@ -70,17 +75,27 @@ export function Hero() {
 
         <motion.div
           variants={item}
-          className="mt-9 flex flex-col items-center gap-3"
+          className="mt-9 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row"
         >
           <Button
             size="lg"
+            className="w-full min-w-[11.25rem] sm:w-auto"
             nativeButton={false}
             render={<Link href="/register" />}
           >
             Create my first post
             <IconSparkles data-icon="inline-end" aria-hidden />
           </Button>
-       
+
+          <Button
+            type="button"
+            size="lg"
+            className="creator-trial-gradient-button w-full min-w-[11.25rem] sm:w-auto"
+            onClick={openCreatorTrialPopup}
+          >
+            Request free trial
+            <IconRosetteDiscountCheck data-icon="inline-end" aria-hidden />
+          </Button>
         </motion.div>
       </motion.div>
 

@@ -36,7 +36,7 @@ export type BillingStatus = {
 }
 
 export type CheckoutResult =
-  | { kind: "ok"; checkoutUrl: string }
+  | { kind: "ok"; checkoutUrl: string; trialApplied: boolean }
   | { kind: "resumed"; data: BillingStatus }
   | { kind: "unauthorized" }
   | { kind: "conflict" }
@@ -103,7 +103,12 @@ export async function createCheckout(
       }
     }
 
-    const data = (await response.json()) as { checkout_url?: string; resumed?: boolean; billing?: BillingStatus }
+    const data = (await response.json()) as {
+      checkout_url?: string
+      trial_applied?: boolean
+      resumed?: boolean
+      billing?: BillingStatus
+    }
     if (data.resumed) {
       if (!data.billing) {
         return { kind: "error", message: "Subscription was resumed but status was not returned" }
@@ -115,7 +120,11 @@ export async function createCheckout(
       return { kind: "error", message: "Checkout URL was not returned" }
     }
 
-    return { kind: "ok", checkoutUrl: data.checkout_url }
+    return {
+      kind: "ok",
+      checkoutUrl: data.checkout_url,
+      trialApplied: data.trial_applied ?? false,
+    }
   } catch (error) {
     return {
       kind: "error",

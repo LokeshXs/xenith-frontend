@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 
 import { Navbar } from "@/components/landing/navbar"
+import { CreatorTrialPopup } from "@/components/landing/creator-trial-popup"
 import { Hero } from "@/components/landing/hero"
 import { VideoDemo } from "@/components/landing/video-demo"
 import { FeatureScroll } from "@/components/landing/feature-scroll"
@@ -53,6 +54,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
+      <CreatorTrialPopup />
       <main className="flex-1">
         <Hero/>
         <VideoDemo />
