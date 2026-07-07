@@ -37,7 +37,7 @@ const NAME_MAX_LENGTH = 120
 const EMAIL_MAX_LENGTH = 320
 const URL_MAX_LENGTH = 2000
 const MESSAGE_MAX_LENGTH = 2000
-const MIN_FOLLOWER_COUNT = 10_000
+const MIN_FOLLOWER_COUNT = 5_000
 const MAX_FOLLOWER_COUNT = 1_000_000_000
 const X_HOSTNAMES = new Set(['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'])
 
@@ -48,6 +48,7 @@ type TrialRequestFields = {
   followerCount: string
   isVerified: boolean
   message: string
+  website: string
 }
 
 type FieldErrors = Partial<Record<keyof TrialRequestFields, string>>
@@ -59,6 +60,7 @@ const EMPTY_FIELDS: TrialRequestFields = {
   followerCount: '',
   isVerified: false,
   message: '',
+  website: '',
 }
 
 function normalizeFollowerCount(value: string): string {
@@ -147,7 +149,7 @@ const trialRequestSchema = z.object({
       if (count < MIN_FOLLOWER_COUNT) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'This offer is for creators with 10k+ followers.',
+          message: 'This offer is for creators with 5k+ followers.',
         })
       }
     }),
@@ -247,6 +249,7 @@ export function CreatorTrialPopup() {
         followerCount: Number(normalizeFollowerCount(result.data.followerCount)),
         isVerified: result.data.isVerified,
         ...(result.data.message ? { message: result.data.message } : {}),
+        website: fields.website,
       })
 
       writeLocalStorage(SUBMITTED_KEY, 'true')
@@ -260,6 +263,8 @@ export function CreatorTrialPopup() {
       setFormError(
         status === 400
           ? getErrorMessage(error, 'Check your details and try again.')
+          : status === 429
+            ? 'Too many requests. Please try again later.'
           : 'Could not submit your request. Please try again.',
       )
     } finally {
@@ -271,6 +276,22 @@ export function CreatorTrialPopup() {
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[34rem] overflow-y-auto rounded-3xl border-border/80 p-0 shadow-2xl">
         <form onSubmit={handleSubmit} noValidate>
+          <div
+            aria-hidden="true"
+            className="absolute left-[-9999px] top-auto h-px w-px overflow-hidden"
+          >
+            <label htmlFor="trial-website">Website</label>
+            <input
+              id="trial-website"
+              name="website"
+              type="text"
+              tabIndex={-1}
+              autoComplete="off"
+              value={fields.website}
+              onChange={handleChange}
+            />
+          </div>
+
           <div className="relative border-b border-border/70 px-5 pt-5 pb-4 sm:px-6">
             <DialogClose
               render={
@@ -300,7 +321,7 @@ export function CreatorTrialPopup() {
                   Request your 3-day Xenith trial
                 </DialogTitle>
                 <DialogDescription className="max-w-md text-sm leading-relaxed">
-                  For verified X creators with 10k+ followers. We review each request
+                  For verified X creators with 5k+ followers. We review each request
                   manually.
                 </DialogDescription>
               </DialogHeader>
@@ -309,7 +330,7 @@ export function CreatorTrialPopup() {
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium">
                 <IconUsers className="size-3.5 text-primary" />
-                10k+ followers
+                5k+ followers
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300">
                 <IconRosetteDiscountCheck className="size-3.5" />

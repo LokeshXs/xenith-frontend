@@ -207,6 +207,10 @@ export function AdminTrialRequestsClient() {
         toast.error('This request no longer exists.')
         return
       }
+      if (statusCode === 409) {
+        toast.error('This email already has an approved trial request.')
+        return
+      }
       toast.error(getErrorMessage(mutationError, 'Could not update trial request.'))
     },
   })

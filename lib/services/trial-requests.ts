@@ -6,6 +6,7 @@ export type CreateTrialRequestInput = {
   followerCount?: number
   isVerified: boolean
   message?: string
+  website?: string
 }
 
 export type CreateTrialRequestResponse = {
@@ -14,6 +15,7 @@ export type CreateTrialRequestResponse = {
     status: 'pending' | 'approved' | 'rejected'
     created_at: string
   }
+  duplicate?: boolean
 }
 
 export type TrialRequestStatus = 'pending' | 'approved' | 'rejected'
