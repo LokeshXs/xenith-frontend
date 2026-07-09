@@ -297,7 +297,7 @@ export function SuggestedReplyCard({
               </div>
             </div>
 
-            <p className="text-sm whitespace-pre-wrap break-words">
+            <p className="max-h-56 overflow-y-auto pr-2 text-sm whitespace-pre-wrap break-words overscroll-contain">
               {reply.source_text}
             </p>
 
@@ -392,7 +392,9 @@ export function SuggestedReplyCard({
                 </div>
               </div>
             ) : (
-              <p className="text-sm whitespace-pre-wrap break-words">{text}</p>
+              <p className="max-h-36 overflow-y-auto pr-2 text-sm whitespace-pre-wrap break-words overscroll-contain">
+                {text}
+              </p>
             )}
           </div>
         </div>
