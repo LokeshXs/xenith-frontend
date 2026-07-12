@@ -5,10 +5,11 @@ import Image from "next/image"
 import { toast } from "sonner"
 import { getExportCapability } from "@/lib/milestone/capability"
 import { downloadBlob } from "@/lib/milestone/export"
-import { milestoneFilename, parseFollowerCount } from "@/lib/milestone/formatters"
+import { formatFollowerCount, milestoneFilename, parseFollowerCount } from "@/lib/milestone/formatters"
 import { MILESTONE_VIDEO } from "@/lib/milestone/constants"
 import { milestoneInputSchema, validateFollowerCount, validateHandle } from "@/lib/milestone/schema"
-import type { ExportCapability, ExportState, MilestoneDraft, MilestoneInput, Orientation, OutputType } from "@/types/milestone"
+import { siteConfig } from "@/lib/seo/config"
+import type { ExportCapability, ExportState, MilestoneDraft, MilestoneInput, MilestoneResult, Orientation, OutputType } from "@/types/milestone"
 import { getMilestoneComposition } from "@/video/composition-config"
 import { MilestoneWizard, WIZARD_STEP_COUNT } from "./milestone-wizard"
 
@@ -31,7 +32,23 @@ export function MilestoneGenerator() {
   const [orientation, setOrientation] = useState<Orientation>("portrait")
   const [capability, setCapability] = useState<ExportCapability | null>(null)
   const [exportState, setExportState] = useState<ExportState>({ status: "idle" })
+  const [result, setResult] = useState<MilestoneResult | null>(null)
   const abortController = useRef<AbortController | null>(null)
+  const resultUrl = useRef<string | null>(null)
+
+  function revokeResultUrl() {
+    if (resultUrl.current) {
+      URL.revokeObjectURL(resultUrl.current)
+      resultUrl.current = null
+    }
+  }
+
+  function publishResult(blob: Blob, filename: string, kind: MilestoneResult["kind"]) {
+    revokeResultUrl()
+    const url = URL.createObjectURL(blob)
+    resultUrl.current = url
+    setResult({ url, blob, filename, kind })
+  }
 
   useEffect(() => {
     void getExportCapability()
@@ -50,6 +67,7 @@ export function MilestoneGenerator() {
   useEffect(() => {
     return () => {
       abortController.current?.abort()
+      revokeResultUrl()
     }
   }, [])
 
@@ -57,6 +75,10 @@ export function MilestoneGenerator() {
 
   function clearExportResult() {
     if (exportState.status === "error" || exportState.status === "complete") setExportState({ status: "idle" })
+    if (result) {
+      revokeResultUrl()
+      setResult(null)
+    }
   }
 
   function updateDraft(field: "handle" | "followerCount", value: string) {
@@ -89,6 +111,8 @@ export function MilestoneGenerator() {
   }
 
   function handleReset() {
+    revokeResultUrl()
+    setResult(null)
     setExportState({ status: "idle" })
     setStep(0)
   }
@@ -119,9 +143,9 @@ export function MilestoneGenerator() {
         allowHtmlInCanvas: true,
       })
       const blob = await rendered.blob({ format: "png" })
-      downloadBlob(blob, milestoneFilename(input.handle, input.followerCount, "png"))
-      setExportState({ status: "complete", message: "Your image is ready — check your downloads." })
-      toast.success("Image downloaded")
+      publishResult(blob, milestoneFilename(input.handle, input.followerCount, "png"), "image")
+      setExportState({ status: "complete", message: "Your image is ready." })
+      toast.success("Image ready")
     } catch (error) {
       console.error("Failed to export image", error)
       setExportState({ status: "error", message: "We could not create the image. Please try again." })
@@ -159,9 +183,9 @@ export function MilestoneGenerator() {
         onProgress: (progress) => setExportState({ status: "rendering", format, progress: progress.progress }),
       })
       const blob = await rendered.getBlob()
-      downloadBlob(blob, milestoneFilename(input.handle, input.followerCount, format))
-      setExportState({ status: "complete", message: `Your ${format.toUpperCase()} video is ready — check your downloads.` })
-      toast.success(`${format.toUpperCase()} video downloaded`)
+      publishResult(blob, milestoneFilename(input.handle, input.followerCount, format), "video")
+      setExportState({ status: "complete", message: `Your ${format.toUpperCase()} video is ready.` })
+      toast.success(`${format.toUpperCase()} video ready`)
     } catch (error) {
       if (isAbortError(error)) {
         setExportState({ status: "idle" })
@@ -188,6 +212,41 @@ export function MilestoneGenerator() {
 
   function cancelExport() {
     abortController.current?.abort()
+  }
+
+  function downloadResult() {
+    if (!result) return
+    downloadBlob(result.blob, result.filename)
+  }
+
+  async function shareResult() {
+    if (!result) return
+    const count = parseFollowerCount(draft.followerCount)
+    const text = count !== null
+      ? `I just hit ${formatFollowerCount(count)} followers on X 🎉`
+      : "I just hit a new follower milestone on X 🎉"
+    const shareUrl = `${siteConfig.url}/milestone`
+
+    const file = new File([result.blob], result.filename, { type: result.blob.type })
+    const canShareFile = typeof navigator !== "undefined" && navigator.canShare?.({ files: [file] })
+
+    if (canShareFile) {
+      try {
+        await navigator.share({ files: [file], text })
+      } catch (error) {
+        if (!isAbortError(error)) {
+          console.error("Failed to share milestone", error)
+          toast.error("Sharing failed. You can download and post it manually.")
+        }
+      }
+      return
+    }
+
+    // Desktop fallback: open X's composer prefilled, and download the file to attach.
+    const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`
+    window.open(intent, "_blank", "noopener,noreferrer")
+    downloadBlob(result.blob, result.filename)
+    toast.message("Attach the downloaded file to your post on X")
   }
 
   return (
@@ -226,6 +285,7 @@ export function MilestoneGenerator() {
             orientation={orientation}
             capability={capability}
             exportState={exportState}
+            result={result}
             busy={busy}
             onChange={updateDraft}
             onNext={handleNext}
@@ -235,6 +295,8 @@ export function MilestoneGenerator() {
             onRender={handleRender}
             onCancel={cancelExport}
             onReset={handleReset}
+            onShare={shareResult}
+            onDownload={downloadResult}
           />
         </div>
       </div>

@@ -30,3 +30,10 @@ export type ExportState =
   | { status: "exporting-image" }
   | { status: "complete"; message: string }
   | { status: "error"; message: string }
+
+export type MilestoneResult = {
+  url: string
+  blob: Blob
+  filename: string
+  kind: "image" | "video"
+}

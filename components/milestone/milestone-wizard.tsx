@@ -1,13 +1,13 @@
 "use client"
 
 import type { ReactNode } from "react"
-import { IconArrowLeft, IconArrowRight, IconCheck, IconDownload, IconPhoto, IconVideo } from "@tabler/icons-react"
+import { IconArrowLeft, IconArrowRight, IconBrandX, IconCheck, IconDownload, IconPhoto, IconVideo } from "@tabler/icons-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { formatFollowerCount, parseFollowerCount } from "@/lib/milestone/formatters"
 import { cn } from "@/lib/utils"
-import type { ExportCapability, ExportState, MilestoneDraft, Orientation, OutputType } from "@/types/milestone"
+import type { ExportCapability, ExportState, MilestoneDraft, MilestoneResult, Orientation, OutputType } from "@/types/milestone"
 import { ExportProgress } from "./export-progress"
 
 export const WIZARD_STEP_COUNT = 5
@@ -30,6 +30,7 @@ export function MilestoneWizard({
   orientation,
   capability,
   exportState,
+  result,
   busy,
   onChange,
   onNext,
@@ -39,6 +40,8 @@ export function MilestoneWizard({
   onRender,
   onCancel,
   onReset,
+  onShare,
+  onDownload,
 }: {
   step: number
   draft: MilestoneDraft
@@ -47,6 +50,7 @@ export function MilestoneWizard({
   orientation: Orientation
   capability: ExportCapability | null
   exportState: ExportState
+  result: MilestoneResult | null
   busy: boolean
   onChange: (field: "handle" | "followerCount", value: string) => void
   onNext: () => void
@@ -56,6 +60,8 @@ export function MilestoneWizard({
   onRender: () => void
   onCancel: () => void
   onReset: () => void
+  onShare: () => void
+  onDownload: () => void
 }) {
   const meta = STEP_META[step]
   const isLastStep = step === WIZARD_STEP_COUNT - 1
@@ -145,10 +151,13 @@ export function MilestoneWizard({
             orientation={orientation}
             capability={capability}
             exportState={exportState}
+            result={result}
             busy={busy}
             onRender={onRender}
             onCancel={onCancel}
             onReset={onReset}
+            onShare={onShare}
+            onDownload={onDownload}
           />
         )}
       </div>
@@ -278,20 +287,26 @@ function CreateStep({
   orientation,
   capability,
   exportState,
+  result,
   busy,
   onRender,
   onCancel,
   onReset,
+  onShare,
+  onDownload,
 }: {
   draft: MilestoneDraft
   outputType: OutputType
   orientation: Orientation
   capability: ExportCapability | null
   exportState: ExportState
+  result: MilestoneResult | null
   busy: boolean
   onRender: () => void
   onCancel: () => void
   onReset: () => void
+  onShare: () => void
+  onDownload: () => void
 }) {
   const count = parseFollowerCount(draft.followerCount)
   const videoUnsupported = outputType === "video" && capability !== null && !capability.canRenderVideo
@@ -314,23 +329,37 @@ function CreateStep({
     )
   }
 
-  if (exportState.status === "complete") {
+  if (result) {
+    const isPortrait = orientation === "portrait"
+    const frameClass = cn(
+      "overflow-hidden rounded-[2rem] border border-border bg-background p-2 shadow-xl shadow-primary/10",
+      isPortrait ? "mx-auto w-full max-w-[17rem]" : "w-full",
+    )
+    const mediaClass = cn("size-full rounded-[1.6rem] object-cover", isPortrait ? "aspect-[9/16]" : "aspect-video")
     return (
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-3 rounded-3xl border border-primary/20 bg-primary/5 p-4">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <IconCheck className="size-5" aria-hidden />
-          </span>
-          <p className="text-sm font-medium">{exportState.message}</p>
+      <div className="flex flex-col gap-5">
+        <div className={frameClass}>
+          {result.kind === "video" ? (
+            <video src={result.url} autoPlay loop muted playsInline className={mediaClass} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={result.url} alt="Your milestone" className={mediaClass} />
+          )}
         </div>
         <div className="flex flex-col gap-3">
-          <Button type="button" size="lg" onClick={onRender}>
-            <IconDownload data-icon="inline-start" aria-hidden />
-            Download again
+          <Button type="button" size="lg" onClick={onShare}>
+            <IconBrandX data-icon="inline-start" aria-hidden />
+            Share on X
           </Button>
-          <Button type="button" size="lg" variant="outline" onClick={onReset}>
-            Create another
-          </Button>
+          <div className="flex gap-3">
+            <Button type="button" size="lg" variant="outline" className="flex-1" onClick={onDownload}>
+              <IconDownload data-icon="inline-start" aria-hidden />
+              Download
+            </Button>
+            <Button type="button" size="lg" variant="outline" className="flex-1" onClick={onReset}>
+              Create another
+            </Button>
+          </div>
         </div>
       </div>
     )
@@ -352,7 +381,7 @@ function CreateStep({
             ? "Create WebM video"
             : "Create MP4 video"
           : "Create image"}
-        <IconDownload data-icon="inline-end" aria-hidden />
+        <IconArrowRight data-icon="inline-end" aria-hidden />
       </Button>
 
       {outputType === "video" && capability?.reason && (

@@ -33,6 +33,7 @@ const nextConfig: NextConfig = {
         `script-src 'self' 'unsafe-inline'${isProduction ? "" : " 'unsafe-eval'"}${relaxed ? " 'wasm-unsafe-eval'" : ""} https://cloud.umami.is https://www.googletagmanager.com https://www.google-analytics.com https://va.vercel-scripts.com`,
         `connect-src ${connectSources.join(" ")}`,
         "frame-src https://www.youtube-nocookie.com https://www.youtube.com",
+        ...(relaxed ? ["media-src 'self' blob:"] : []),
         ...(relaxed ? ["worker-src 'self' blob:"] : []),
         ...(isProduction ? ["upgrade-insecure-requests"] : []),
       ].join("; ");
