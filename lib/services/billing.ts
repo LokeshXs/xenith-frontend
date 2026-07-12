@@ -4,6 +4,7 @@ export type BillingPlan = (typeof BILLING_PLANS)[number]
 export type BillingSubscriptionStatus =
   | "free"
   | "pending"
+  | "processing"
   | "active"
   | "on_hold"
   | "cancelled"

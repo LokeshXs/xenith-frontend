@@ -6,6 +6,7 @@ import { Hero } from "@/components/landing/hero"
 import { VideoDemo } from "@/components/landing/video-demo"
 import { FeatureScroll } from "@/components/landing/feature-scroll"
 import { BentoGrid } from "@/components/landing/bento-grid"
+import { MilestoneCallout } from "@/components/landing/milestone-callout"
 import { Pricing } from "@/components/landing/pricing"
 import { Testimonials } from "@/components/landing/testimonials"
 import { CTA } from "@/components/landing/cta"
@@ -60,6 +61,7 @@ export default function Home() {
         <VideoDemo />
         <FeatureScroll />
         <BentoGrid />
+        <MilestoneCallout />
         <Pricing />
         <Testimonials />
         <CTA />

@@ -297,9 +297,11 @@ export function SuggestedReplyCard({
               </div>
             </div>
 
-            <p className="max-h-56 overflow-y-auto pr-2 text-sm whitespace-pre-wrap break-words overscroll-contain">
-              {reply.source_text}
-            </p>
+            <div className="max-h-56 min-h-0 overflow-y-auto overscroll-contain pr-2">
+              <p className="text-sm whitespace-pre-wrap break-words">
+                {reply.source_text}
+              </p>
+            </div>
 
             {metrics && (
               <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1">

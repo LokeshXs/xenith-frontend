@@ -13,6 +13,7 @@ const PUBLIC_ROUTES = [
   '/signout',
   '/error',
   '/soon',
+  '/milestone',
   '/logo-preview',
   '/privacy-policy',
   '/terms-and-conditions',

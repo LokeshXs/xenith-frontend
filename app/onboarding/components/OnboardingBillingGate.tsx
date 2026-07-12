@@ -181,7 +181,7 @@ function billingGateCopy(status: BillingSubscriptionStatus): {
     };
   }
 
-  if (status === "pending") {
+  if (status === "pending" || status === "processing") {
     return {
       title: "Your subscription is still activating",
       description:

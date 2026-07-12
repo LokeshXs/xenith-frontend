@@ -27,9 +27,9 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/context/AuthContext"
 
 const NAV_LINKS = [
-  { label: "Features", href: "#features" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Demo", href: "#demo" },
+  { label: "Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
+  { label: "Demo", href: "/#demo" },
 ]
 
 // Smooth, critically-damped spring (Apple-style) — settles without overshoot,
