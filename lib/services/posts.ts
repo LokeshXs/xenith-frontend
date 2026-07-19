@@ -38,6 +38,12 @@ export interface GeneratedPost {
   meme_template_id: string | null;
   meme_captions: string[];
   meme_text: string | null;
+  // Display this draft as a meme image; blocks publish/schedule (deferred).
+  is_meme: boolean;
+  // Snapshot of the first generated draft, for single-step undo after a rewrite.
+  original_post_type: string | null;
+  original_engagement_score: number | null;
+  original_engagement_signals?: EngagementBreakdown | null;
   run_id: string;
   generated_at: string;
   created_at: string;

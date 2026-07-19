@@ -1,21 +1,36 @@
 "use client";
 
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { isAxiosError } from "axios";
 import {
   IconAlertTriangle,
+  IconArrowBackUp,
+  IconBook,
   IconCalendar,
   IconCheck,
   IconClock,
   IconCopy,
   IconDots,
+  IconDownload,
   IconExternalLink,
+  IconFlame,
   IconHeart,
   IconInfoCircle,
+  IconList,
   IconMessageCircle,
+  IconMoodSmile,
   IconPencil,
+  IconPhoto,
+  IconRefresh,
   IconRepeat,
   IconRosetteDiscountCheckFilled,
+  IconSparkles,
   IconX,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
@@ -25,6 +40,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { TextShimmer } from "@/components/ui/text-shimmer";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,6 +52,14 @@ import { Input } from "@/components/ui/input";
 import { TIME_SLOTS, formatTime12 } from "@/components/ui/time-picker";
 import { Label } from "@/components/ui/label";
 import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogClose,
   DialogContent,
@@ -44,14 +69,29 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import type { GeneratedPost, XAccount } from "@/lib/services/posts";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import type {
+  EngagementBreakdown,
+  GeneratedPost,
+  XAccount,
+} from "@/lib/services/posts";
 import { EngagementBadge, getEngagementBand } from "./EngagementBadge";
 import { MemeCanvas } from "./MemeCanvas";
 import { MemeGeneratorDialog } from "./MemeGeneratorDialog";
 import { SignalBars } from "./SignalBars";
 import {
+  type RewriteType,
+  convertToMeme,
   publishPost,
+  rescorePost,
+  rewritePost,
   schedulePost,
+  undoPost,
   unschedulePost,
   updatePost,
 } from "@/lib/services/posts-client";
@@ -121,10 +161,6 @@ function signalPercent(value: number | undefined): number {
   return Math.round(Math.min(Math.max(value ?? 0, 0), 1) * 100);
 }
 
-function sameStringArray(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((value, index) => value === b[index]);
-}
-
 function EditedBadge({ className }: { className?: string }) {
   return (
     <Badge
@@ -140,14 +176,66 @@ function EditedBadge({ className }: { className?: string }) {
   );
 }
 
+// The text post types shown as selectable cards in the transform rail — each
+// with the icon + one-line definition that mirrors the backend's rewrite
+// prompt. "Meme" is rendered separately (an image action, not a text type).
+const TRANSFORM_OPTIONS: {
+  type: RewriteType;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}[] = [
+  {
+    type: "Question",
+    icon: IconMessageCircle,
+    description: "Reframe it as one genuine question that invites replies.",
+  },
+  {
+    type: "Hot take",
+    icon: IconFlame,
+    description: "Lead with a bold, debatable opinion worth arguing with.",
+  },
+  {
+    type: "Story",
+    icon: IconBook,
+    description: "Retell it as a short narrative that lands the insight.",
+  },
+  {
+    type: "Tips/Listicle",
+    icon: IconList,
+    description: "Break it into 2–4 tight, scannable tips.",
+  },
+  {
+    type: "Funny",
+    icon: IconMoodSmile,
+    description: "A wry, relatable twist — humor over information.",
+  },
+];
+
+type TransformTarget = RewriteType | "Meme";
+
 function EngagementInfoDialog({
   open,
   onOpenChange,
   post,
   content,
   hashtags,
+  postType,
   xAccount,
+  edited,
   stale,
+  score,
+  signals,
+  isMeme,
+  memeTextLength,
+  memeNode,
+  transforming,
+  transformingTarget,
+  onTransform,
+  onConvertMeme,
+  onUndo,
+  onRescore,
+  rescoring,
+  canUndo,
   copied,
   onCopyTweet,
   isEditing,
@@ -166,8 +254,23 @@ function EngagementInfoDialog({
   post: GeneratedPost;
   content: string;
   hashtags: string[];
+  postType: string;
   xAccount: XAccount | null;
+  edited: boolean;
   stale: boolean;
+  score: number | null;
+  signals: EngagementBreakdown | null | undefined;
+  isMeme: boolean;
+  memeTextLength: number;
+  memeNode: ReactNode;
+  transforming: boolean;
+  transformingTarget: TransformTarget | null;
+  onTransform: (type: RewriteType) => void;
+  onConvertMeme: () => void;
+  onUndo: () => void;
+  onRescore: () => void;
+  rescoring: boolean;
+  canUndo: boolean;
   copied: boolean;
   onCopyTweet: () => void;
   isEditing: boolean;
@@ -183,9 +286,8 @@ function EngagementInfoDialog({
 }) {
   const name = xAccount?.name ?? "Your X account";
   const initials = initialsFrom(name);
-  const score = post.engagement_score;
-  const signals = post.engagement_signals;
-  const band = typeof score === "number" ? getEngagementBand(score) : null;
+  const hasScore = typeof score === "number";
+  const band = hasScore ? getEngagementBand(score) : null;
   const characterCount = [content, hashtags.join(" ")]
     .filter(Boolean)
     .join(" ").length;
@@ -196,17 +298,35 @@ function EngagementInfoDialog({
   const replyPct = signalPercent(signals?.signals.p_reply);
   const repostPct = signalPercent(signals?.signals.p_repost);
   const editingActive = isEditing || isSaving;
+  const generatingMeme = transformingTarget === "Meme";
+  const optionDisabled = transforming || rescoring || isEditing;
+
+  // Confirm a rewrite before running it — it costs an AI call and clears the
+  // current score. Clicking a type card stages it here; the alert commits it.
+  const [pendingType, setPendingType] = useState<TransformTarget | null>(null);
+  const confirmTransform = () => {
+    const type = pendingType;
+    setPendingType(null);
+    if (type === "Meme") onConvertMeme();
+    else if (type) onTransform(type);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && transforming) return;
+        onOpenChange(nextOpen);
+      }}
+    >
       <DialogContent className="grid h-[90vh] max-h-none w-[90vw] max-w-none grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden rounded-2xl p-0 sm:rounded-3xl">
         <header className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-7 sm:py-5">
           <DialogHeader className="gap-1 text-left">
             <DialogTitle className="text-xl font-semibold">
-              Post engagement details
+              Transform &amp; engagement
             </DialogTitle>
             <DialogDescription>
-              Review the generated tweet and the score signals behind it.
+              Transform this draft and review its engagement details.
             </DialogDescription>
           </DialogHeader>
           <DialogClose
@@ -216,6 +336,7 @@ function EngagementInfoDialog({
                 size="icon-sm"
                 className="rounded-xl"
                 aria-label="Close engagement details"
+                disabled={transforming}
               />
             }
           >
@@ -225,6 +346,146 @@ function EngagementInfoDialog({
 
         <div className="grid min-h-0 overflow-y-auto md:grid-cols-[minmax(0,0.8fr)_minmax(20rem,0.86fr)] md:overflow-hidden">
           <section className="flex min-h-0 flex-col gap-3 border-b p-5 sm:p-6 md:overflow-hidden md:border-r md:border-b-0">
+            {/* Transform rail — reshape this draft into another post type. */}
+            <div className="flex shrink-0 flex-col gap-2.5">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                  Transform into
+                </p>
+                <div className="flex items-center gap-2">
+                  {transforming && (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <IconRefresh className="size-3.5 animate-spin" />
+                      {generatingMeme ? "Generating meme…" : "Transforming…"}
+                    </span>
+                  )}
+                  {canUndo && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={transforming || rescoring}
+                      onClick={onUndo}
+                    >
+                      <IconArrowBackUp className="size-4" />
+                      Undo to original
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="-mx-1 flex gap-2.5 overflow-x-auto px-1 pb-1">
+                {TRANSFORM_OPTIONS.map(({ type, icon: Icon, description }) => {
+                  const selected = !isMeme && postType === type;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      aria-pressed={selected}
+                      disabled={optionDisabled}
+                      onClick={() => setPendingType(type)}
+                      className={cn(
+                        "relative flex w-[15.5rem] shrink-0 items-start gap-3 rounded-2xl border p-3.5 text-left transition-colors",
+                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                        "disabled:cursor-not-allowed disabled:opacity-60",
+                        selected
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                          : "border-border bg-background hover:border-foreground/20",
+                      )}
+                    >
+                      <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <Icon className="size-5" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-semibold leading-tight">
+                          {type}
+                        </span>
+                        <span className="mt-1 block text-xs leading-snug text-muted-foreground">
+                          {description}
+                        </span>
+                      </span>
+                      {selected && (
+                        <span className="absolute top-2.5 right-2.5 inline-flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                          <IconCheck className="size-3.5" />
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+
+                {/* Meme is an AI image action rather than a text rewrite. */}
+                <button
+                  type="button"
+                  aria-pressed={isMeme}
+                  aria-disabled={isMeme || optionDisabled}
+                  disabled={optionDisabled || isMeme}
+                  onClick={() => {
+                    if (!isMeme) setPendingType("Meme");
+                  }}
+                  className={cn(
+                    "relative flex w-[15.5rem] shrink-0 items-start gap-3 rounded-2xl border border-dashed p-3.5 text-left transition-colors",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                    "disabled:cursor-not-allowed disabled:opacity-60",
+                    isMeme && "cursor-default disabled:opacity-100",
+                    isMeme
+                      ? "border-primary bg-primary/5 ring-1 ring-primary/30"
+                      : "border-border bg-background hover:border-foreground/20",
+                  )}
+                >
+                  <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                    <IconPhoto className="size-5" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-1.5 text-sm font-semibold leading-tight">
+                      Meme
+                      <span className="rounded bg-muted px-1 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">
+                        Image
+                      </span>
+                    </span>
+                    <span className="mt-1 block text-xs leading-snug text-muted-foreground">
+                      Let AI choose a template and write fitting captions.
+                    </span>
+                  </span>
+                  {isMeme && (
+                    <span className="absolute top-2.5 right-2.5 inline-flex size-5 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <IconCheck className="size-3.5" />
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <AlertDialog
+              open={pendingType !== null}
+              onOpenChange={(nextOpen) => {
+                if (!nextOpen) setPendingType(null);
+              }}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>
+                    Transform to “{pendingType}”?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {pendingType === "Meme"
+                      ? "AI will choose a fitting template and generate its post text and captions. You can edit everything afterward."
+                      : `This rewrites your draft in the “${pendingType}” style, in your voice, and clears its current engagement score. You can undo to the original anytime.`}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPendingType(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button size="sm" onClick={confirmTransform}>
+                    {pendingType === "Meme" ? "Generate meme" : "Transform"}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+
             <div className="flex min-h-0 flex-1 flex-col rounded-2xl border border-border bg-background p-4 shadow-xs">
               <div className="flex shrink-0 items-center gap-2">
                 <Avatar className="size-10 rounded-full">
@@ -248,12 +509,42 @@ function EngagementInfoDialog({
                         </span>
                       )}
                     </div>
-                    {stale && <EditedBadge className="h-5 text-[11px]" />}
+                    {edited && <EditedBadge className="h-5 text-[11px]" />}
                   </div>
                 </div>
               </div>
 
-              {editingActive ? (
+              {transforming ? (
+                <div className="mt-4 min-h-0 flex-1 overflow-y-auto pr-2">
+                  <TextShimmer className="text-sm font-medium" duration={1.2}>
+                    {generatingMeme
+                      ? "Choosing a template and writing captions…"
+                      : "Rewriting your post…"}
+                  </TextShimmer>
+                  {generatingMeme ? (
+                    <Skeleton className="mt-4 aspect-video max-h-[24rem] w-full rounded-2xl" />
+                  ) : (
+                    <>
+                      <div className="mt-4 space-y-2.5">
+                        <Skeleton className="h-4 w-[92%] rounded-md" />
+                        <Skeleton className="h-4 w-full rounded-md" />
+                        <Skeleton className="h-4 w-[85%] rounded-md" />
+                        <Skeleton className="h-4 w-[96%] rounded-md" />
+                        <Skeleton className="h-4 w-[70%] rounded-md" />
+                      </div>
+                      <div className="mt-5 flex gap-2">
+                        <Skeleton className="h-4 w-16 rounded-md" />
+                        <Skeleton className="h-4 w-14 rounded-md" />
+                        <Skeleton className="h-4 w-20 rounded-md" />
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : isMeme ? (
+                <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
+                  {memeNode}
+                </div>
+              ) : editingActive ? (
                 <div className="mt-7 flex min-h-0 flex-1 flex-col gap-4">
                   <div className="flex min-h-0 flex-1 flex-col gap-1.5">
                     <Label htmlFor={`modal-post-content-${post.id}`}>
@@ -295,34 +586,123 @@ function EngagementInfoDialog({
 
               <div className="mt-6 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t pt-4 text-sm text-muted-foreground max-md:text-xs">
                 <span className="min-w-0">
-                  {editingActive
-                    ? `Editing · ${draftCharacterCount} characters`
-                    : `Draft · ${characterCount} characters`}
+                  {transforming ? (
+                    <Skeleton className="h-4 w-28 rounded-md" />
+                  ) : editingActive ? (
+                    `Editing · ${draftCharacterCount} characters`
+                  ) : isMeme ? (
+                    `Meme draft · ${memeTextLength} characters`
+                  ) : (
+                    `Draft · ${characterCount} characters`
+                  )}
                 </span>
-                {!editingActive && (
+                {transforming ? (
                   <div className="flex shrink-0 items-center gap-7">
                     <span className="inline-flex items-center gap-2">
-                      <IconHeart className="size-5" />
-                      {likePct}%
+                      <IconHeart className="size-5 opacity-40" />
+                      <Skeleton className="h-4 w-8 rounded-md" />
                     </span>
                     <span className="inline-flex items-center gap-2">
-                      <IconMessageCircle className="size-5" />
-                      {replyPct}%
+                      <IconMessageCircle className="size-5 opacity-40" />
+                      <Skeleton className="h-4 w-8 rounded-md" />
                     </span>
                     <span className="inline-flex items-center gap-2">
-                      <IconRepeat className="size-5" />
-                      {repostPct}%
+                      <IconRepeat className="size-5 opacity-40" />
+                      <Skeleton className="h-4 w-8 rounded-md" />
                     </span>
                   </div>
+                ) : isMeme ? null : (
+                  !editingActive && (
+                    <div className="flex shrink-0 items-center gap-7">
+                      <span className="inline-flex items-center gap-2">
+                        <IconHeart className="size-5" />
+                        {likePct}%
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <IconMessageCircle className="size-5" />
+                        {replyPct}%
+                      </span>
+                      <span className="inline-flex items-center gap-2">
+                        <IconRepeat className="size-5" />
+                        {repostPct}%
+                      </span>
+                    </div>
+                  )
                 )}
               </div>
             </div>
           </section>
 
           <section className="flex min-h-0 flex-col gap-4 overflow-y-auto bg-muted/20 p-5 sm:p-6">
-            <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
-              Engagement score
-            </p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
+                Engagement score
+              </p>
+              {!isMeme && !hasScore && !transforming && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onRescore}
+                  disabled={rescoring || editingActive}
+                >
+                  <IconRefresh
+                    className={cn("size-4", rescoring && "animate-spin")}
+                  />
+                  {rescoring ? "Scoring…" : "Re-score"}
+                </Button>
+              )}
+            </div>
+
+            {transforming ? (
+              <div className="flex min-h-0 flex-1 flex-col gap-4">
+                <TextShimmer className="text-sm font-medium" duration={1.2}>
+                  {generatingMeme
+                    ? "Generating your meme…"
+                    : "Preparing the rewritten post…"}
+                </TextShimmer>
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-[3.75rem] w-30 rounded-xl" />
+                  <div className="min-w-0 space-y-2">
+                    <Skeleton className="h-4 w-24 rounded-md" />
+                    <Skeleton className="h-3.5 w-40 rounded-md" />
+                  </div>
+                </div>
+                <div className="flex min-h-[14rem] flex-1 flex-col gap-4 rounded-2xl border border-border bg-background p-4 shadow-xs sm:p-5">
+                  <Skeleton className="h-3.5 w-64 rounded-md" />
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Skeleton className="h-3.5 w-16 rounded-md" />
+                        <Skeleton className="h-3.5 w-10 rounded-md" />
+                      </div>
+                      <Skeleton className="h-2.5 w-full rounded-full" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : isMeme ? (
+              <div className="rounded-2xl border border-border bg-background p-4 text-sm text-muted-foreground shadow-xs">
+                Engagement scoring isn&apos;t available for meme posts yet.
+              </div>
+            ) : (
+              <>
+            {/* After a transform (or manual edit) the shown draft has no current
+                score — invite the user to re-score rather than show a stale one.
+                Once a fresh score is present, the panel below speaks for itself. */}
+            {stale && !hasScore && (
+              <div className="flex items-start gap-3 rounded-2xl border border-sky-400/40 bg-sky-500/10 p-4 text-sm text-sky-900 dark:text-sky-100">
+                <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-700 dark:text-sky-200">
+                  <IconSparkles className="size-3.5" />
+                </span>
+                <div className="min-w-0">
+                  <p className="font-medium">You&apos;ve changed this post.</p>
+                  <p className="mt-0.5 text-sky-800/90 dark:text-sky-100/90">
+                    Its engagement score is out of date — re-score to see how the
+                    current version is likely to perform.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {band && typeof score === "number" ? (
               <div className="flex items-center gap-4">
@@ -343,11 +723,11 @@ function EngagementInfoDialog({
                   </p>
                 </div>
               </div>
-            ) : (
+            ) : !stale ? (
               <p className="rounded-2xl border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
                 No engagement score is available for this post.
               </p>
-            )}
+            ) : null}
 
             {signals ? (
               <div className="flex min-h-[14rem] flex-1 flex-col rounded-2xl border border-border bg-background p-4 shadow-xs sm:p-5">
@@ -360,27 +740,27 @@ function EngagementInfoDialog({
                   className="mt-4 flex-1 justify-evenly gap-3"
                 />
               </div>
-            ) : score !== null && score !== undefined ? (
+            ) : !stale && score !== null && score !== undefined ? (
               <p className="rounded-2xl border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
                 Detailed signal probabilities are not available for this post.
               </p>
             ) : null}
 
-            <div className="flex items-start gap-3 rounded-2xl border border-sky-400/40 bg-sky-500/10 p-4 text-sm text-sky-900 dark:text-sky-100">
-              <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-700 dark:text-sky-200">
-                <IconInfoCircle className="size-3.5" />
-              </span>
-              <p>
-                Calculated using X algorithm-inspired engagement weights. It is
-                a relative guide, not a prediction of exact likes or replies.
-              </p>
-            </div>
-
-            {stale && (
-              <p className="rounded-2xl border border-amber-500/20 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100">
-                This score reflects the original draft and may be outdated after
-                your edit.
-              </p>
+            {/* Explainer only makes sense alongside a real score; when there's
+                no score the Re-score button takes its place. */}
+            {hasScore && (
+              <div className="flex items-start gap-3 rounded-2xl border border-sky-400/40 bg-sky-500/10 p-4 text-sm text-sky-900 dark:text-sky-100">
+                <span className="mt-0.5 inline-flex size-6 shrink-0 items-center justify-center rounded-lg bg-sky-500/10 text-sky-700 dark:text-sky-200">
+                  <IconInfoCircle className="size-3.5" />
+                </span>
+                <p>
+                  Calculated using X algorithm-inspired engagement weights. It
+                  is a relative guide, not a prediction of exact likes or
+                  replies.
+                </p>
+              </div>
+            )}
+              </>
             )}
           </section>
         </div>
@@ -403,10 +783,23 @@ function EngagementInfoDialog({
           ) : (
             <>
               <div className="flex items-center gap-2">
-                <DialogClose render={<Button variant="outline" size="sm" />}>
+                <DialogClose
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={transforming}
+                    />
+                  }
+                >
                   Close
                 </DialogClose>
-                <Button variant="outline" size="sm" onClick={onStartEdit}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={onStartEdit}
+                  disabled={isMeme || transforming}
+                >
                   <IconPencil className="size-4" />
                   Edit tweet
                 </Button>
@@ -448,6 +841,7 @@ export function PostCard({
   // edits without the parent needing to refetch.
   const [content, setContent] = useState(post.content);
   const [hashtags, setHashtags] = useState<string[]>(post.hashtags);
+  const [postType, setPostType] = useState(post.post_type);
   const [originalContent, setOriginalContent] = useState(
     post.original_content ?? post.content,
   );
@@ -455,6 +849,23 @@ export function PostCard({
     post.original_hashtags.length > 0 ? post.original_hashtags : post.hashtags,
   );
   const [edited, setEdited] = useState(post.edited);
+
+  // Engagement score/breakdown, lifted into state so transforms, Undo, and
+  // on-demand re-scoring update the modal and header badge in place.
+  const [engagementScore, setEngagementScore] = useState<number | null>(
+    post.engagement_score,
+  );
+  const [engagementSignals, setEngagementSignals] = useState<
+    EngagementBreakdown | null
+  >(post.engagement_signals ?? null);
+  // The shown score no longer matches the shown content. Text transforms clear
+  // it, Undo restores the original score, and on-demand re-scoring refreshes it.
+  const [scoreStale, setScoreStale] = useState(post.edited);
+  const [transformingTarget, setTransformingTarget] =
+    useState<TransformTarget | null>(null);
+  const [isUndoing, setIsUndoing] = useState(false);
+  const isTransforming = transformingTarget !== null || isUndoing;
+  const [isRescoring, setIsRescoring] = useState(false);
 
   // Edit-mode state.
   const [isEditing, setIsEditing] = useState(false);
@@ -468,7 +879,7 @@ export function PostCard({
   const [tweetId, setTweetId] = useState(post.tweet_id);
   const [scheduledAt, setScheduledAt] = useState(post.scheduled_at);
   const [publishError, setPublishError] = useState(post.publish_error);
-  const [viewMode, setViewMode] = useState<"text" | "meme">("text");
+  const [isMeme, setIsMeme] = useState(post.is_meme);
   const [memeTemplateId, setMemeTemplateId] = useState(post.meme_template_id);
   const [memeCaptions, setMemeCaptions] = useState<string[]>(
     post.meme_captions,
@@ -486,9 +897,12 @@ export function PostCard({
   const [pickedDate, setPickedDate] = useState<Date | undefined>(undefined);
   const [pickedTime, setPickedTime] = useState("09:00");
   const selectedSlotRef = useRef<HTMLButtonElement>(null);
+  const memeCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const busy = isPublishing || isScheduling || isUnscheduling;
-  const publishingDisabled = busy || isEditing || viewMode === "meme";
+  // Memes can't be published/scheduled yet (no media pipeline); block it here.
+  const publishingDisabled =
+    busy || isEditing || isMeme || isTransforming || isRescoring;
   const selectedMemeTemplate =
     getMemeTemplate(memeTemplateId) ?? defaultMemeTemplate();
   const selectedMemeCaptions = fitCaptionsToTemplate(
@@ -703,12 +1117,136 @@ export function PostCard({
           : originalHashtags,
       );
       setEdited(updated.edited);
+      // A manual edit doesn't re-score, so the shown score is now stale.
+      setScoreStale(updated.edited);
       toast.success("Post updated");
     } catch (error) {
       console.error("Failed to update post:", error);
       toast.error("Failed to update post");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Sync all displayed fields from a server post after a transform/undo/rescore.
+  // `stale` marks whether the shown score still matches the shown content: a
+  // transform clears the score (stale=true → prompt a re-score); undo restores
+  // the original's fresh score and re-score refreshes it (stale=false).
+  const reconcilePost = (updated: GeneratedPost, stale: boolean) => {
+    setContent(updated.content);
+    setHashtags(updated.hashtags);
+    setPostType(updated.post_type);
+    setEngagementScore(updated.engagement_score);
+    setEngagementSignals(updated.engagement_signals ?? null);
+    setEdited(updated.edited);
+    setScoreStale(stale);
+    setIsMeme(updated.is_meme);
+    setMemeTemplateId(updated.meme_template_id);
+    setMemeCaptions(updated.meme_captions);
+    setMemeText(updated.meme_text ?? "");
+    setOriginalContent(updated.original_content ?? originalContent);
+    setOriginalHashtags(
+      updated.original_hashtags.length > 0
+        ? updated.original_hashtags
+        : originalHashtags,
+    );
+  };
+
+  const handleTransform = async (type: RewriteType) => {
+    setTransformingTarget(type);
+    try {
+      const updated = await rewritePost(post.id, type);
+      // Transform clears the score — mark stale so the panel prompts a re-score.
+      reconcilePost(updated, true);
+      toast.success(`Transformed to ${type} — re-score to update engagement`);
+    } catch (error) {
+      const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 429) {
+        toast.error("Daily transform limit reached. Try again tomorrow.");
+      } else if (code === 409) {
+        toast.error("Published posts can't be transformed.");
+      } else {
+        console.error("Failed to transform post:", error);
+        toast.error("Failed to transform post. Please try again.");
+      }
+    } finally {
+      setTransformingTarget(null);
+    }
+  };
+
+  const handleConvertMeme = async () => {
+    if (isMeme) return;
+    setTransformingTarget("Meme");
+    try {
+      const updated = await convertToMeme(post.id);
+      // The text score remains stored, but is hidden while meme mode is active.
+      reconcilePost(updated, scoreStale);
+      toast.success("Meme generated — use the edit button to customize it.");
+    } catch (error) {
+      const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 429) {
+        toast.error("Daily transform limit reached. Try again tomorrow.");
+      } else if (code === 409) {
+        const message = isAxiosError(error)
+          ? (error.response?.data?.error as string | undefined)
+          : undefined;
+        toast.error(
+          message?.includes("already a meme")
+            ? "This post is already a meme."
+            : "Published posts can't be transformed.",
+        );
+      } else if (code === 502) {
+        toast.error(
+          "Couldn't generate a meme for this draft. Please try again.",
+        );
+      } else {
+        console.error("Failed to generate meme:", error);
+        toast.error("Failed to generate meme. Please try again.");
+      }
+    } finally {
+      setTransformingTarget(null);
+    }
+  };
+
+  const handleUndo = async () => {
+    setIsUndoing(true);
+    try {
+      const updated = await undoPost(post.id);
+      // Undo restores the original draft's own (fresh) score.
+      reconcilePost(updated, false);
+      toast.success("Restored the original draft");
+    } catch (error) {
+      const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 409) {
+        toast.error("Nothing to undo — this is the original draft.");
+      } else {
+        console.error("Failed to undo:", error);
+        toast.error("Failed to undo. Please try again.");
+      }
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const handleRescore = async () => {
+    setIsRescoring(true);
+    try {
+      const updated = await rescorePost(post.id);
+      // Score now matches the shown content — no longer stale.
+      reconcilePost(updated, false);
+      toast.success("Engagement score updated");
+    } catch (error) {
+      const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 429) {
+        toast.error("Daily transform limit reached. Try again tomorrow.");
+      } else if (code === 502) {
+        toast.error("Couldn't score this post right now. Please try again.");
+      } else {
+        console.error("Failed to re-score post:", error);
+        toast.error("Failed to re-score. Please try again.");
+      }
+    } finally {
+      setIsRescoring(false);
     }
   };
 
@@ -720,8 +1258,32 @@ export function PostCard({
     setMemeText(updated.meme_text ?? "");
   };
 
+  const handleMemeCanvasReady = useCallback((canvas: HTMLCanvasElement) => {
+    memeCanvasRef.current = canvas;
+  }, []);
+
+  const downloadMeme = () => {
+    const canvas = memeCanvasRef.current;
+    if (!canvas) {
+      toast.error("Meme is still rendering");
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.download = `xenith-meme-${post.id}.png`;
+    link.href = canvas.toDataURL("image/png");
+    link.click();
+    toast.success("Meme downloaded");
+  };
+
   const copyTweet = () => {
-    const tweetText = [content, hashtagsText].filter(Boolean).join("\n\n");
+    const tweetText = isMeme
+      ? memeText.trim()
+      : [content, hashtagsText].filter(Boolean).join("\n\n");
+    if (!tweetText) {
+      toast.error("No post text to copy");
+      return;
+    }
     return copyToClipboard(tweetText, setCopiedTweet, "Tweet copied");
   };
 
@@ -834,12 +1396,62 @@ export function PostCard({
     </div>
   ) : null;
 
-  // The backend doesn't re-score on save, so once content/hashtags diverge from
-  // the generated draft the score is stale — persist and show this after reload.
-  const scoreStale =
-    edited ||
-    content !== originalContent ||
-    !sameStringArray(hashtags, originalHashtags);
+  const canUndo = edited || isMeme;
+
+  // The meme view: canvas + an edit-icon overlay that opens the meme editor.
+  // Shared between the card body and the "More info" modal's left column.
+  const memeNode = (
+    <div className="flex flex-col gap-3">
+      {memeText.trim() && (
+        <p className="whitespace-pre-wrap text-sm leading-relaxed">
+          {memeText}
+        </p>
+      )}
+      <div className="relative w-fit">
+        <MemeCanvas
+          template={selectedMemeTemplate}
+          captions={selectedMemeCaptions}
+          className="max-h-[26rem] rounded-lg bg-muted/30 p-2"
+          canvasClassName="shadow-none"
+          onReady={handleMemeCanvasReady}
+        />
+        <div className="absolute top-3 right-3 flex items-center gap-1.5">
+          <Button
+            type="button"
+            variant="secondary"
+            size="icon-sm"
+            className="rounded-lg shadow-sm"
+            onClick={downloadMeme}
+            disabled={busy || isTransforming}
+            aria-label="Download meme"
+          >
+            <IconDownload className="size-4" />
+          </Button>
+          <MemeGeneratorDialog
+            postId={post.id}
+            currentTemplateId={memeTemplateId}
+            currentCaptions={memeCaptions}
+            currentMemeText={memeText}
+            onSaved={handleMemeSaved}
+            disabled={busy || isTransforming}
+            triggerRender={
+              <Button
+                type="button"
+                variant="secondary"
+                size="icon-sm"
+                className="rounded-lg shadow-sm"
+                aria-label="Edit meme"
+              />
+            }
+            triggerContent={<IconPencil className="size-4" />}
+          />
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Memes can&apos;t be published to X yet — undo to publish.
+      </p>
+    </div>
+  );
 
   return (
     <Card size="sm" className="mb-4 break-inside-avoid gap-3 shadow-sm">
@@ -863,8 +1475,10 @@ export function PostCard({
               </span>
             )}
           </div>
-          {scoreStale && <EditedBadge className="h-5 px-1.5 text-[11px]" />}
-          <EngagementBadge score={post.engagement_score} stale={scoreStale} />
+          {edited && <EditedBadge className="h-5 px-1.5 text-[11px]" />}
+          {!isMeme && (
+            <EngagementBadge score={engagementScore} stale={scoreStale} />
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger
               aria-label="More actions"
@@ -890,8 +1504,23 @@ export function PostCard({
             post={post}
             content={content}
             hashtags={hashtags}
+            postType={postType}
             xAccount={xAccount}
+            edited={edited}
             stale={scoreStale}
+            score={engagementScore}
+            signals={engagementSignals}
+            isMeme={isMeme}
+            memeTextLength={memeText.length}
+            memeNode={memeNode}
+            transforming={isTransforming}
+            transformingTarget={transformingTarget}
+            onTransform={handleTransform}
+            onConvertMeme={handleConvertMeme}
+            onUndo={handleUndo}
+            onRescore={handleRescore}
+            rescoring={isRescoring}
+            canUndo={canUndo}
             copied={copiedTweet}
             onCopyTweet={copyTweet}
             isEditing={isEditing}
@@ -907,26 +1536,14 @@ export function PostCard({
           />
         </div>
 
-        {!isEditing && (
-          <div className="inline-flex w-fit rounded-lg border bg-muted/30 p-0.5">
-            {(["text", "meme"] as const).map((mode) => (
-              <button
-                key={mode}
-                type="button"
-                onClick={() => setViewMode(mode)}
-                aria-pressed={viewMode === mode}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                  viewMode === mode
-                    ? "bg-background text-foreground shadow-xs"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {mode === "text" ? "Text" : "Meme"}
-              </button>
-            ))}
-          </div>
+        {isMeme && !isEditing && (
+          <Badge
+            variant="outline"
+            className="w-fit gap-1 border-primary/25 bg-primary/10 text-primary"
+          >
+            <IconMoodSmile className="size-3" />
+            Meme
+          </Badge>
         )}
 
         {isEditing ? (
@@ -966,48 +1583,19 @@ export function PostCard({
               </Button>
             </div>
           </div>
+        ) : isMeme ? (
+          memeNode
         ) : (
           <>
-            {viewMode === "text" ? (
-              <>
-                {/* Body */}
-                <div className="flex flex-col gap-1">
-                  <p className="text-sm whitespace-pre-wrap">{content}</p>
-                </div>
+            {/* Body */}
+            <div className="flex flex-col gap-1">
+              <p className="text-sm whitespace-pre-wrap">{content}</p>
+            </div>
 
-                {/* Hashtags */}
-                {hashtags.length > 0 && (
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm text-sky-500">{hashtagsText}</p>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex flex-col gap-3">
-                {memeText.trim() && (
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                    {memeText}
-                  </p>
-                )}
-                <MemeCanvas
-                  template={selectedMemeTemplate}
-                  captions={selectedMemeCaptions}
-                  className="max-h-[26rem] rounded-lg bg-muted/30 p-2"
-                  canvasClassName="shadow-none"
-                />
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-muted-foreground">
-                    Switch to Text to publish.
-                  </p>
-                  <MemeGeneratorDialog
-                    postId={post.id}
-                    currentTemplateId={memeTemplateId}
-                    currentCaptions={memeCaptions}
-                    currentMemeText={memeText}
-                    onSaved={handleMemeSaved}
-                    disabled={busy}
-                  />
-                </div>
+            {/* Hashtags */}
+            {hashtags.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <p className="text-sm text-sky-500">{hashtagsText}</p>
               </div>
             )}
           </>
@@ -1019,20 +1607,32 @@ export function PostCard({
         {(status === "pending" || status === "approved") && (
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                onClick={handlePublish}
-                disabled={publishingDisabled}
-              >
-                {isPublishing ? "Publishing…" : "Publish now"}
-              </Button>
+              {isMeme ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={<span tabIndex={0} className="inline-flex" />}
+                    >
+                      <Button size="sm" disabled>
+                        Publish now
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Meme publishing coming soon — undo to publish
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={handlePublish}
+                  disabled={publishingDisabled}
+                >
+                  {isPublishing ? "Publishing…" : "Publish now"}
+                </Button>
+              )}
               {renderScheduleButton(scheduleOpen, handleScheduleOpenChange)}
             </div>
-            {viewMode === "meme" && (
-              <span className="text-xs text-muted-foreground">
-                Switch to Text to publish
-              </span>
-            )}
             {footerActions}
           </div>
         )}

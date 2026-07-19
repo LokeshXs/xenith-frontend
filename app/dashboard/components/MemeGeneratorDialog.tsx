@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
-import { IconCheck, IconDownload, IconPhoto } from "@tabler/icons-react";
+import { IconCheck, IconDownload, IconPhoto, IconX } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -39,6 +40,8 @@ export function MemeGeneratorDialog({
   currentMemeText,
   onSaved,
   disabled,
+  triggerRender,
+  triggerContent,
 }: {
   postId: number;
   currentTemplateId: string | null;
@@ -46,9 +49,12 @@ export function MemeGeneratorDialog({
   currentMemeText: string;
   onSaved: (post: GeneratedPost) => void;
   disabled?: boolean;
+  // Override the default "Edit meme" button — e.g. an icon button over the image.
+  triggerRender?: React.ReactElement;
+  triggerContent?: React.ReactNode;
 }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const initialRef = useRef<{
+  const [initial, setInitial] = useState<{
     templateId: string;
     captions: string[];
     memeText: string;
@@ -72,10 +78,10 @@ export function MemeGeneratorDialog({
   const [isSaving, setIsSaving] = useState(false);
 
   const hasUnsavedChanges =
-    initialRef.current !== null &&
-    (templateId !== initialRef.current.templateId ||
-      memeText !== initialRef.current.memeText ||
-      !sameCaptions(captions, initialRef.current.captions));
+    initial !== null &&
+    (templateId !== initial.templateId ||
+      memeText !== initial.memeText ||
+      !sameCaptions(captions, initial.captions));
 
   const initializeFromCurrent = () => {
     const template =
@@ -86,11 +92,11 @@ export function MemeGeneratorDialog({
     );
     const nextMemeText = currentMemeText;
 
-    initialRef.current = {
+    setInitial({
       templateId: template.id,
       captions: nextCaptions,
       memeText: nextMemeText,
-    };
+    });
     setTemplateId(template.id);
     setCaptions(nextCaptions);
     setMemeText(nextMemeText);
@@ -115,10 +121,10 @@ export function MemeGeneratorDialog({
   };
 
   const resetLocalChanges = () => {
-    if (!initialRef.current) return;
-    setTemplateId(initialRef.current.templateId);
-    setCaptions(initialRef.current.captions);
-    setMemeText(initialRef.current.memeText);
+    if (!initial) return;
+    setTemplateId(initial.templateId);
+    setCaptions(initial.captions);
+    setMemeText(initial.memeText);
   };
 
   const handleSave = async () => {
@@ -169,15 +175,21 @@ export function MemeGeneratorDialog({
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger
-        render={<Button type="button" variant="outline" size="sm" />}
+        render={
+          triggerRender ?? <Button type="button" variant="outline" size="sm" />
+        }
         disabled={disabled}
       >
-        <IconPhoto className="size-4" />
-        Edit meme
+        {triggerContent ?? (
+          <>
+            <IconPhoto className="size-4" />
+            Edit meme
+          </>
+        )}
       </DialogTrigger>
 
       <DialogContent className="grid h-[90vh] max-h-none w-[94vw] max-w-6xl grid-rows-[auto_minmax(0,1fr)_auto] gap-0 overflow-hidden p-0">
-        <header className="border-b px-5 py-4 sm:px-6">
+        <header className="flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <DialogHeader className="gap-1 text-left">
             <DialogTitle className="flex items-center gap-2 text-xl">
               <IconPhoto className="size-5" />
@@ -187,6 +199,20 @@ export function MemeGeneratorDialog({
               Pick a template, edit the text, and save this meme for the post.
             </DialogDescription>
           </DialogHeader>
+          <DialogClose
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-sm"
+                className="shrink-0 rounded-xl"
+                aria-label="Close meme editor"
+                disabled={isSaving}
+              />
+            }
+          >
+            <IconX className="size-4" />
+          </DialogClose>
         </header>
 
         <div className="grid min-h-0 md:grid-cols-[18rem_minmax(0,1fr)_20rem]">
@@ -255,22 +281,22 @@ export function MemeGeneratorDialog({
           <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto border-t p-4 md:border-t-0 md:border-l">
             <div className="min-w-0">
               <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Meme text
+                Post text
               </p>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Optional text shown above the meme.
+                Tweet text shown above the meme.
               </p>
             </div>
 
             <div className="grid gap-1.5">
-              <Label htmlFor={`meme-text-${postId}`}>Text</Label>
+              <Label htmlFor={`meme-text-${postId}`}>Tweet text</Label>
               <Textarea
                 id={`meme-text-${postId}`}
                 value={memeText}
                 onChange={(event) => setMemeText(event.target.value)}
                 maxLength={280}
                 rows={4}
-                placeholder="Add optional text above the meme"
+                placeholder="Add tweet text separate from the image captions"
               />
               <p className="text-xs text-muted-foreground tabular-nums">
                 {memeText.length}/280
@@ -314,6 +340,18 @@ export function MemeGeneratorDialog({
             {selectedTemplate.width}x{selectedTemplate.height} PNG
           </p>
           <div className="flex items-center gap-2">
+            <DialogClose
+              render={
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={isSaving}
+                />
+              }
+            >
+              Close
+            </DialogClose>
             {hasUnsavedChanges && (
               <Button
                 type="button"

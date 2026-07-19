@@ -103,3 +103,48 @@ export async function unschedulePost(id: number): Promise<GeneratedPost> {
   );
   return data.post;
 }
+
+// The text post types a draft can be transformed into. Mirrors the backend's
+// REWRITE_TYPES enum. "Meme" is handled separately (convertToMeme), not here.
+export const REWRITE_TYPES = [
+  "Question",
+  "Hot take",
+  "Story",
+  "Tips/Listicle",
+  "Funny",
+] as const;
+export type RewriteType = (typeof REWRITE_TYPES)[number];
+
+// POST /api/v1/posts/:id/rewrite — transforms a draft into another text type
+// and clears its old score until the user requests a re-score.
+export async function rewritePost(
+  id: number,
+  postType: RewriteType,
+): Promise<GeneratedPost> {
+  const { data } = await apiClient.post<PostResponse>(`/posts/${id}/rewrite`, {
+    post_type: postType,
+  });
+  return data.post;
+}
+
+// POST /api/v1/posts/:id/undo — restores a draft to its first generated version.
+export async function undoPost(id: number): Promise<GeneratedPost> {
+  const { data } = await apiClient.post<PostResponse>(`/posts/${id}/undo`);
+  return data.post;
+}
+
+// POST /api/v1/posts/:id/rescore — re-scores the draft's current content on
+// demand (a transform clears the score). Returns the post with a fresh score.
+export async function rescorePost(id: number): Promise<GeneratedPost> {
+  const { data } = await apiClient.post<PostResponse>(`/posts/${id}/rescore`);
+  return data.post;
+}
+
+// POST /api/v1/posts/:id/convert-to-meme — selects a fitting template,
+// generates tweet text + captions, and atomically enables meme mode.
+export async function convertToMeme(id: number): Promise<GeneratedPost> {
+  const { data } = await apiClient.post<PostResponse>(
+    `/posts/${id}/convert-to-meme`,
+  );
+  return data.post;
+}
