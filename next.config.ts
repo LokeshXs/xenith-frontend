@@ -17,7 +17,9 @@ const nextConfig: NextConfig = {
         "https://*.supabase.co",
         "https://growwithxenith.com",
         "https://api.growwithxenith.com",
-        "http://localhost:3001",
+        // Local API origin for development only — never ship it to the
+        // production CSP. In dev, set NEXT_PUBLIC_API_URL=http://localhost:3001.
+        ...(!isProduction ? ["http://localhost:3001"] : []),
         ...(apiUrl ? [apiUrl] : []),
         ...(relaxed ? ["https://www.remotion.pro"] : []),
       ];

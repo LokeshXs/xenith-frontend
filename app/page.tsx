@@ -12,6 +12,7 @@ import { Testimonials } from "@/components/landing/testimonials"
 import { CTA } from "@/components/landing/cta"
 import { Footer } from "@/components/landing/footer"
 import { siteConfig } from "@/lib/seo/config"
+import { CREATOR_PRICING } from "@/lib/pricing"
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -19,6 +20,8 @@ export const metadata: Metadata = {
 
 // Structured data describing the product. Only facts actually rendered on the
 // page (name, description, the real Creator plan price) — no invented ratings.
+// The Offer price comes from the same constant the pricing card renders, so the
+// two can never drift apart.
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
@@ -28,6 +31,12 @@ const jsonLd = {
       name: siteConfig.name,
       url: siteConfig.url,
       logo: `${siteConfig.url}/opengraph-image.png`,
+      sameAs: ["https://x.com/growwithxenith"],
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer support",
+        email: "hello@growwithxenith.com",
+      },
     },
     {
       "@type": "SoftwareApplication",
@@ -39,8 +48,8 @@ const jsonLd = {
       publisher: { "@id": `${siteConfig.url}/#organization` },
       offers: {
         "@type": "Offer",
-        price: "29",
-        priceCurrency: "USD",
+        price: String(CREATOR_PRICING.monthly),
+        priceCurrency: CREATOR_PRICING.currency,
         category: "Creator",
       },
     },

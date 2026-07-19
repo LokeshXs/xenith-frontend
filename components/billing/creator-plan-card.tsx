@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import { IconCheck, IconHelpCircle, IconLoader2 } from "@tabler/icons-react"
 
 import { cn } from "@/lib/utils"
+import { CREATOR_PRICING } from "@/lib/pricing"
 import type { BillingPlan } from "@/lib/services/billing"
 import { Button } from "@/components/ui/button"
 import {
@@ -25,8 +26,8 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const
 
 const CREATOR_PLAN = {
   name: "Creator",
-  monthly: 24,
-  yearly: 20,
+  monthly: CREATOR_PRICING.monthly,
+  yearly: CREATOR_PRICING.yearly,
   blurb: "Everything you need to create consistently and grow on X.",
   features: [
     { label: "10 post drafts per day" },
