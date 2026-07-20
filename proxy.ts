@@ -17,6 +17,8 @@ const PUBLIC_ROUTES = [
   '/logo-preview',
   '/privacy-policy',
   '/terms-and-conditions',
+  '/robots.txt',
+  '/sitemap.xml',
   '/opengraph-image.png',
   '/twitter-image.png'
 ] as const
@@ -37,6 +39,14 @@ function isAuthRoute(pathname: string): boolean {
 
 export async function proxy(request: NextRequest): Promise<NextResponse> {
   const { pathname } = request.nextUrl
+
+  if (pathname === '/sitemap.ts') {
+    return NextResponse.redirect(new URL('/sitemap.xml', request.url))
+  }
+
+  if (pathname === '/robots.ts') {
+    return NextResponse.redirect(new URL('/robots.txt', request.url))
+  }
 
   // Must pass response to middleware client so it can mutate cookies
   const response = NextResponse.next({ request })
@@ -80,6 +90,7 @@ export async function proxy(request: NextRequest): Promise<NextResponse> {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\..*).*)',
+    '/(robots.txt|sitemap.xml|robots.ts|sitemap.ts)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)',
   ],
 }
