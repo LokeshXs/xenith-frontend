@@ -1,0 +1,26 @@
+# Xenith — AI Growth Engine for X
+
+> Xenith helps creators and teams grow on X (Twitter) with AI-powered content
+> drafting, suggested replies, engagement insights, post scheduling, and a
+> 0–100 draft score based on X algorithm signals. The Creator plan is $24/month.
+
+## Core pages
+
+- [Home](https://growwithxenith.com): Product overview — content drafting, reply assistant, trend detection, analytics, and scheduling for X.
+- [Follower Milestone Maker](https://growwithxenith.com/milestone): Free browser-based tool to make an animated video or image celebrating an X follower milestone. No account required.
+
+## What Xenith does
+
+- Turns creator feeds into a posting playbook, generating drafts influenced by writing patterns while preserving the user's own voice.
+- Scores every draft from 0–100 using X algorithm signals to estimate likely likes, reposts, and replies.
+- Suggests replies to high-traction posts so users can engage early without living in the X feed.
+- Schedules posts and publishes to X without copy-paste.
+
+## Plans
+
+- Creator: $24/month (or $20/month billed yearly). Includes 10 post drafts/day, 1,000 reply credits, unlimited scheduling, tracking across 10 X profiles, and X algorithm-based analytics.
+
+## Contact
+
+- Email: hello@growwithxenith.com
+- X: https://x.com/growwithxenith
