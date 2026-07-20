@@ -1,5 +1,9 @@
 import { apiClient } from "../api";
-import type { GeneratedPost, PostsTodayResponse } from "./posts";
+import type {
+  DraftAiActionSummary,
+  GeneratedPost,
+  PostsTodayResponse,
+} from "./posts";
 
 // GET /api/v1/posts/today — today's posts (auto or manual). Client-side
 // counterpart to the server `fetchPostsToday`, used to reload after a 409.
@@ -58,6 +62,11 @@ export async function generateMemeCaptions(
 
 interface PostResponse {
   post: GeneratedPost;
+}
+
+export interface DraftAiActionResult {
+  post: GeneratedPost;
+  ai_actions: DraftAiActionSummary;
 }
 
 export interface UpdatePostMemeInput {
@@ -120,11 +129,12 @@ export type RewriteType = (typeof REWRITE_TYPES)[number];
 export async function rewritePost(
   id: number,
   postType: RewriteType,
-): Promise<GeneratedPost> {
-  const { data } = await apiClient.post<PostResponse>(`/posts/${id}/rewrite`, {
-    post_type: postType,
-  });
-  return data.post;
+): Promise<DraftAiActionResult> {
+  const { data } = await apiClient.post<DraftAiActionResult>(
+    `/posts/${id}/rewrite`,
+    { post_type: postType },
+  );
+  return data;
 }
 
 // POST /api/v1/posts/:id/undo — restores a draft to its first generated version.
@@ -135,16 +145,20 @@ export async function undoPost(id: number): Promise<GeneratedPost> {
 
 // POST /api/v1/posts/:id/rescore — re-scores the draft's current content on
 // demand (a transform clears the score). Returns the post with a fresh score.
-export async function rescorePost(id: number): Promise<GeneratedPost> {
-  const { data } = await apiClient.post<PostResponse>(`/posts/${id}/rescore`);
-  return data.post;
+export async function rescorePost(id: number): Promise<DraftAiActionResult> {
+  const { data } = await apiClient.post<DraftAiActionResult>(
+    `/posts/${id}/rescore`,
+  );
+  return data;
 }
 
 // POST /api/v1/posts/:id/convert-to-meme — selects a fitting template,
 // generates tweet text + captions, and atomically enables meme mode.
-export async function convertToMeme(id: number): Promise<GeneratedPost> {
-  const { data } = await apiClient.post<PostResponse>(
+export async function convertToMeme(
+  id: number,
+): Promise<DraftAiActionResult> {
+  const { data } = await apiClient.post<DraftAiActionResult>(
     `/posts/${id}/convert-to-meme`,
   );
-  return data.post;
+  return data;
 }

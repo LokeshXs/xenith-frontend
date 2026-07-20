@@ -62,6 +62,14 @@ export interface XAccount {
   avatar: string;
 }
 
+export interface DraftAiActionSummary {
+  balance: number;
+  period_granted: number;
+  period_used: number;
+  period_started_at: string;
+  period_ends_at: string;
+}
+
 export interface PostsTodayResponse {
   // IANA tz used to compute "today" (Preferences.timezone, defaults "UTC")
   timezone: string;
@@ -71,6 +79,8 @@ export interface PostsTodayResponse {
   posts: GeneratedPost[];
   // The connected X account these posts belong to; null if not connected.
   xAccount: XAccount | null;
+  // Daily allowance shared by rewrites, meme generation, and re-scoring.
+  ai_actions: DraftAiActionSummary;
 }
 
 export type PostsTodayResult =
@@ -81,6 +91,7 @@ export type PostsTodayResult =
 export interface PostsListResponse {
   // Ordered by generated_at descending; [] when nothing has been generated.
   posts: GeneratedPost[];
+  ai_actions: DraftAiActionSummary;
 }
 
 export type PostsListResult =

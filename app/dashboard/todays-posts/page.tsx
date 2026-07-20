@@ -55,6 +55,7 @@ export default async function Page() {
         timezone={result.data.timezone}
         deliveryTime={result.data.deliveryTime}
         xAccount={result.data.xAccount}
+        initialAiActions={result.data.ai_actions}
       />
     </Suspense>
   )

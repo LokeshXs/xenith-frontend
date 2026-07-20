@@ -76,6 +76,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type {
+  DraftAiActionSummary,
   EngagementBreakdown,
   GeneratedPost,
   XAccount,
@@ -84,6 +85,7 @@ import { EngagementBadge, getEngagementBand } from "./EngagementBadge";
 import { MemeCanvas } from "./MemeCanvas";
 import { MemeGeneratorDialog } from "./MemeGeneratorDialog";
 import { SignalBars } from "./SignalBars";
+import { useAiActions } from "./AiActionsContext";
 import {
   type RewriteType,
   convertToMeme,
@@ -225,6 +227,7 @@ function EngagementInfoDialog({
   stale,
   score,
   signals,
+  aiActions,
   isMeme,
   memeTextLength,
   memeNode,
@@ -260,6 +263,7 @@ function EngagementInfoDialog({
   stale: boolean;
   score: number | null;
   signals: EngagementBreakdown | null | undefined;
+  aiActions: DraftAiActionSummary;
   isMeme: boolean;
   memeTextLength: number;
   memeNode: ReactNode;
@@ -299,7 +303,10 @@ function EngagementInfoDialog({
   const repostPct = signalPercent(signals?.signals.p_repost);
   const editingActive = isEditing || isSaving;
   const generatingMeme = transformingTarget === "Meme";
-  const optionDisabled = transforming || rescoring || isEditing;
+  const actionsExhausted = aiActions.balance <= 0;
+  const actionsLow = aiActions.balance > 0 && aiActions.balance <= 2;
+  const optionDisabled =
+    transforming || rescoring || isEditing || actionsExhausted;
 
   // Confirm a rewrite before running it — it costs an AI call and clears the
   // current score. Clicking a type card stages it here; the alert commits it.
@@ -352,7 +359,22 @@ function EngagementInfoDialog({
                 <p className="text-xs font-semibold tracking-[0.12em] text-muted-foreground uppercase">
                   Transform into
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium tabular-nums",
+                      actionsExhausted
+                        ? "border-destructive/25 bg-destructive/10 text-destructive"
+                        : actionsLow
+                          ? "border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                          : "border-primary/20 bg-primary/10 text-primary",
+                    )}
+                    title="Resets daily based on your configured timezone."
+                  >
+                    <IconSparkles className="size-3.5" />
+                    {aiActions.balance} of {aiActions.period_granted} AI actions
+                    left
+                  </span>
                   {transforming && (
                     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                       <IconRefresh className="size-3.5 animate-spin" />
@@ -643,7 +665,7 @@ function EngagementInfoDialog({
                   variant="outline"
                   size="sm"
                   onClick={onRescore}
-                  disabled={rescoring || editingActive}
+                  disabled={rescoring || editingActive || actionsExhausted}
                 >
                   <IconRefresh
                     className={cn("size-4", rescoring && "animate-spin")}
@@ -832,6 +854,7 @@ export function PostCard({
   post: GeneratedPost;
   xAccount: XAccount | null;
 }) {
+  const { summary: aiActions, setSummary: setAiActions } = useAiActions();
   const name = xAccount?.name ?? "Your X account";
   const initials = initialsFrom(name);
 
@@ -1155,14 +1178,29 @@ export function PostCard({
   const handleTransform = async (type: RewriteType) => {
     setTransformingTarget(type);
     try {
-      const updated = await rewritePost(post.id, type);
+      const { post: updated, ai_actions: nextAiActions } = await rewritePost(
+        post.id,
+        type,
+      );
+      setAiActions(nextAiActions);
       // Transform clears the score — mark stale so the panel prompts a re-score.
       reconcilePost(updated, true);
       toast.success(`Transformed to ${type} — re-score to update engagement`);
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
-      if (code === 429) {
-        toast.error("Daily transform limit reached. Try again tomorrow.");
+      const errorCode = isAxiosError(error)
+        ? (error.response?.data?.code as string | undefined)
+        : undefined;
+      const nextAiActions = isAxiosError(error)
+        ? (error.response?.data?.ai_actions as
+            | DraftAiActionSummary
+            | undefined)
+        : undefined;
+      if (nextAiActions) setAiActions(nextAiActions);
+      if (code === 429 && errorCode === "DRAFT_AI_ACTIONS_EXHAUSTED") {
+        toast.error("No AI actions left today. Try again tomorrow.");
+      } else if (code === 429) {
+        toast.error("Too many requests. Please wait and try again.");
       } else if (code === 409) {
         toast.error("Published posts can't be transformed.");
       } else {
@@ -1178,14 +1216,27 @@ export function PostCard({
     if (isMeme) return;
     setTransformingTarget("Meme");
     try {
-      const updated = await convertToMeme(post.id);
+      const { post: updated, ai_actions: nextAiActions } =
+        await convertToMeme(post.id);
+      setAiActions(nextAiActions);
       // The text score remains stored, but is hidden while meme mode is active.
       reconcilePost(updated, scoreStale);
       toast.success("Meme generated — use the edit button to customize it.");
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
-      if (code === 429) {
-        toast.error("Daily transform limit reached. Try again tomorrow.");
+      const errorCode = isAxiosError(error)
+        ? (error.response?.data?.code as string | undefined)
+        : undefined;
+      const nextAiActions = isAxiosError(error)
+        ? (error.response?.data?.ai_actions as
+            | DraftAiActionSummary
+            | undefined)
+        : undefined;
+      if (nextAiActions) setAiActions(nextAiActions);
+      if (code === 429 && errorCode === "DRAFT_AI_ACTIONS_EXHAUSTED") {
+        toast.error("No AI actions left today. Try again tomorrow.");
+      } else if (code === 429) {
+        toast.error("Too many requests. Please wait and try again.");
       } else if (code === 409) {
         const message = isAxiosError(error)
           ? (error.response?.data?.error as string | undefined)
@@ -1231,14 +1282,27 @@ export function PostCard({
   const handleRescore = async () => {
     setIsRescoring(true);
     try {
-      const updated = await rescorePost(post.id);
+      const { post: updated, ai_actions: nextAiActions } =
+        await rescorePost(post.id);
+      setAiActions(nextAiActions);
       // Score now matches the shown content — no longer stale.
       reconcilePost(updated, false);
       toast.success("Engagement score updated");
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
-      if (code === 429) {
-        toast.error("Daily transform limit reached. Try again tomorrow.");
+      const errorCode = isAxiosError(error)
+        ? (error.response?.data?.code as string | undefined)
+        : undefined;
+      const nextAiActions = isAxiosError(error)
+        ? (error.response?.data?.ai_actions as
+            | DraftAiActionSummary
+            | undefined)
+        : undefined;
+      if (nextAiActions) setAiActions(nextAiActions);
+      if (code === 429 && errorCode === "DRAFT_AI_ACTIONS_EXHAUSTED") {
+        toast.error("No AI actions left today. Try again tomorrow.");
+      } else if (code === 429) {
+        toast.error("Too many requests. Please wait and try again.");
       } else if (code === 502) {
         toast.error("Couldn't score this post right now. Please try again.");
       } else {
@@ -1510,6 +1574,7 @@ export function PostCard({
             stale={scoreStale}
             score={engagementScore}
             signals={engagementSignals}
+            aiActions={aiActions}
             isMeme={isMeme}
             memeTextLength={memeText.length}
             memeNode={memeNode}

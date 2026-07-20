@@ -8,10 +8,15 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { formatTime12 } from '@/components/ui/time-picker'
 import { apiClient } from '@/lib/api'
-import type { GeneratedPost, XAccount } from '@/lib/services/posts'
+import type {
+  DraftAiActionSummary,
+  GeneratedPost,
+  XAccount,
+} from '@/lib/services/posts'
 import { fetchPostsTodayClient } from '@/lib/services/posts-client'
 import { PostCard } from './PostCard'
 import { PostCardSkeleton } from './PostCardSkeleton'
+import { AiActionsProvider, useAiActions } from './AiActionsContext'
 
 const ERROR_REASON_MAP: Record<string, string> = {
   access_denied: 'You declined to authorize the X connection.',
@@ -26,14 +31,16 @@ type DashboardClientProps = {
   // User's daily delivery time as "HH:MM" (24h) in `timezone`.
   deliveryTime: string
   xAccount: XAccount | null
+  initialAiActions: DraftAiActionSummary
 }
 
-export function DashboardClient({
+function DashboardClientContent({
   initialPosts,
   timezone,
   deliveryTime,
   xAccount,
-}: DashboardClientProps) {
+}: Omit<DashboardClientProps, 'initialAiActions'>) {
+  const { setSummary: setAiActions } = useAiActions()
   const searchParams = useSearchParams()
   const twitterParam = searchParams.get('twitter')
   const reasonParam = searchParams.get('reason')
@@ -109,6 +116,7 @@ export function DashboardClient({
         try {
           const today = await fetchPostsTodayClient()
           setPosts(today.posts)
+          setAiActions(today.ai_actions)
           toast.info('Posts have already been generated today.')
         } catch {
           toast.error('Failed to load today’s posts. Please refresh.')
@@ -221,5 +229,16 @@ export function DashboardClient({
 
     
     </div>
+  )
+}
+
+export function DashboardClient({
+  initialAiActions,
+  ...props
+}: DashboardClientProps) {
+  return (
+    <AiActionsProvider initialSummary={initialAiActions}>
+      <DashboardClientContent {...props} />
+    </AiActionsProvider>
   )
 }

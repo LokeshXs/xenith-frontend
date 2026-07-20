@@ -4,6 +4,7 @@ import { fetchPosts, fetchPostsToday } from '@/lib/services/posts'
 import type { GeneratedPost, XAccount } from '@/lib/services/posts'
 import { formatDayLabel } from '@/lib/utils/day-label'
 import { PostCard } from '../components/PostCard'
+import { AiActionsProvider } from '../components/AiActionsContext'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Posts' }
@@ -89,7 +90,8 @@ export default async function PostsPage() {
   let cardIndex = 0
 
   return (
-    <div className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 max-w-6xl w-full mx-auto">
+    <AiActionsProvider initialSummary={list.data.ai_actions}>
+      <div className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 max-w-6xl w-full mx-auto">
       <header className="flex items-baseline gap-3">
         <h1 className="text-2xl max-sm:text-xl font-semibold tracking-tight">Posts</h1>
         {posts.length > 0 && (
@@ -130,6 +132,7 @@ export default async function PostsPage() {
           </p>
         </div>
       )}
-    </div>
+      </div>
+    </AiActionsProvider>
   )
 }
