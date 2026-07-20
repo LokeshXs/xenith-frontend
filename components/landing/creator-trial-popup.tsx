@@ -37,7 +37,7 @@ const NAME_MAX_LENGTH = 120
 const EMAIL_MAX_LENGTH = 320
 const URL_MAX_LENGTH = 2000
 const MESSAGE_MAX_LENGTH = 2000
-const MIN_FOLLOWER_COUNT = 5_000
+const MIN_FOLLOWER_COUNT = 1_000
 const MAX_FOLLOWER_COUNT = 1_000_000_000
 const X_HOSTNAMES = new Set(['x.com', 'www.x.com', 'twitter.com', 'www.twitter.com'])
 
@@ -149,7 +149,7 @@ const trialRequestSchema = z.object({
       if (count < MIN_FOLLOWER_COUNT) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'This offer is for creators with 5k+ followers.',
+          message: 'This offer is for creators with 1k+ followers.',
         })
       }
     }),
@@ -321,7 +321,7 @@ export function CreatorTrialPopup() {
                   Request your 3-day Xenith trial
                 </DialogTitle>
                 <DialogDescription className="max-w-md text-sm leading-relaxed">
-                  For verified X creators with 5k+ followers. We review each request
+                  For verified X creators with 1k+ followers. We review each request
                   manually.
                 </DialogDescription>
               </DialogHeader>
@@ -330,7 +330,7 @@ export function CreatorTrialPopup() {
             <div className="mt-4 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/40 px-3 py-1.5 text-xs font-medium">
                 <IconUsers className="size-3.5 text-primary" />
-                5k+ followers
+                1k+ followers
               </span>
               <span className="inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-medium text-sky-700 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300">
                 <IconRosetteDiscountCheck className="size-3.5" />
