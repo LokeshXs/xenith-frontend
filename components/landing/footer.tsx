@@ -67,19 +67,36 @@ export function Footer() {
           <p className="hidden text-sm text-muted-foreground sm:block">
             © Xenith 2026. All rights reserved.
           </p>
-          <div className="flex items-center gap-4">
-            {SOCIALS.map(({ label, href, icon: Icon }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={label}
-                className="rounded text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
-              >
-                <Icon className="size-5" />
-              </a>
-            ))}
+          <div className="flex flex-col items-center gap-4 sm:items-end">
+            <div className="flex items-center gap-4">
+              {SOCIALS.map(({ label, href, icon: Icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={label}
+                  className="rounded text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/30"
+                >
+                  <Icon className="size-5" />
+                </a>
+              ))}
+            </div>
+            <a
+              href="https://startupbase.io/products/xenith?utm_source=startupbase&utm_medium=badge&utm_campaign=launch-badge-light"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/launched-on-sb.svg"
+                alt="Launched on StartupBase"
+                width={193}
+                height={55}
+                style={{ height: 55, width: "auto" }}
+              />
+            </a>
           </div>
         </div>
       </div>
