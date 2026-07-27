@@ -1,3 +1,5 @@
+import type { MilestoneNumberFormat } from "@/types/milestone"
+
 export function normalizeHandle(value: string): string {
   return value.trim().replace(/^@+/, "").replace(/\s+/g, "")
 }
@@ -35,7 +37,17 @@ export function formatFullFollowerCount(value: number): string {
   return new Intl.NumberFormat("en-US").format(value)
 }
 
-export function milestoneFilename(handle: string, count: number, extension: "mp4" | "webm" | "png"): string {
+export function formatMilestoneCount(value: number, format: MilestoneNumberFormat): string {
+  return format === "compact" ? formatFollowerCount(value) : formatFullFollowerCount(value)
+}
+
+export function milestoneFilename(
+  handle: string,
+  count: number,
+  numberFormat: MilestoneNumberFormat,
+  extension: "mp4" | "webm" | "png",
+): string {
   const safeHandle = normalizeHandle(handle).toLowerCase().replace(/[^a-z0-9_]/g, "") || "creator"
-  return `xenith-milestone-${safeHandle}-${formatFollowerCount(count).toLowerCase()}.${extension}`
+  const safeCount = formatMilestoneCount(count, numberFormat).toLowerCase().replace(/,/g, "")
+  return `xenith-milestone-${safeHandle}-${safeCount}.${extension}`
 }

@@ -1,11 +1,12 @@
-import type { ExportCapability } from "@/types/milestone"
+import type { ExportCapability, Orientation } from "@/types/milestone"
 import { MILESTONE_ORIENTATIONS } from "./constants"
 
-export async function getExportCapability(): Promise<ExportCapability> {
+export async function getExportCapability(orientation: Orientation = "portrait"): Promise<ExportCapability> {
   const { canRenderMediaOnWeb } = await import("@remotion/web-renderer")
+  const dimensions = MILESTONE_ORIENTATIONS[orientation]
   const commonOptions = {
-    width: MILESTONE_ORIENTATIONS.portrait.width,
-    height: MILESTONE_ORIENTATIONS.portrait.height,
+    width: dimensions.width,
+    height: dimensions.height,
     muted: true,
     videoBitrate: 3_500_000,
   } as const

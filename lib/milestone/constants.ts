@@ -9,6 +9,7 @@ export const MILESTONE_VIDEO = {
 
 export const MILESTONE_ORIENTATIONS = {
   portrait: { width: 1080, height: 1920 },
+  square: { width: 1080, height: 1080 },
   landscape: { width: 1920, height: 1080 },
 } as const
 
@@ -20,4 +21,7 @@ export const DEFAULT_MILESTONE_INPUT: MilestoneInput = {
   handle: "creator",
   followerCount: 10_000,
   orientation: "portrait",
+  numberFormat: "full",
+  profileImageDataUrl: null,
+  imageTreatment: "photo",
 }

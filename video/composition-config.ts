@@ -6,7 +6,10 @@ import { MilestoneComposition } from "./milestone-composition"
 export const milestonePropsSchema = z.object({
   handle: z.string(),
   followerCount: z.number(),
-  orientation: z.enum(["portrait", "landscape"]),
+  orientation: z.enum(["portrait", "square", "landscape"]),
+  numberFormat: z.enum(["full", "compact"]),
+  profileImageDataUrl: z.string().nullable(),
+  imageTreatment: z.enum(["photo", "logo"]),
 })
 
 export type MilestoneCompositionProps = z.infer<typeof milestonePropsSchema>

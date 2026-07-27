@@ -3,13 +3,25 @@
 import { useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import { toast } from "sonner"
+import { trackMilestoneEvent } from "@/lib/analytics/milestone"
 import { getExportCapability } from "@/lib/milestone/capability"
+import { createMilestoneCaptions, type MilestoneCaptionStyle } from "@/lib/milestone/captions"
 import { downloadBlob } from "@/lib/milestone/export"
-import { formatFollowerCount, milestoneFilename, parseFollowerCount } from "@/lib/milestone/formatters"
+import { milestoneFilename, parseFollowerCount } from "@/lib/milestone/formatters"
 import { MILESTONE_VIDEO } from "@/lib/milestone/constants"
 import { milestoneInputSchema, validateFollowerCount, validateHandle } from "@/lib/milestone/schema"
 import { siteConfig } from "@/lib/seo/config"
-import type { ExportCapability, ExportState, MilestoneDraft, MilestoneInput, MilestoneResult, Orientation, OutputType } from "@/types/milestone"
+import type {
+  ExportCapability,
+  ExportState,
+  MilestoneDraft,
+  MilestoneInput,
+  MilestoneNumberFormat,
+  MilestoneProfileImage,
+  MilestoneResult,
+  Orientation,
+  OutputType,
+} from "@/types/milestone"
 import { getMilestoneComposition } from "@/video/composition-config"
 import { MilestoneWizard, WIZARD_STEP_COUNT } from "./milestone-wizard"
 
@@ -30,11 +42,16 @@ export function MilestoneGenerator() {
   const [errors, setErrors] = useState<FieldErrors>({})
   const [outputType, setOutputType] = useState<OutputType>("video")
   const [orientation, setOrientation] = useState<Orientation>("portrait")
+  const [numberFormat, setNumberFormat] = useState<MilestoneNumberFormat>("full")
+  const [profileImage, setProfileImage] = useState<MilestoneProfileImage | null>(null)
   const [capability, setCapability] = useState<ExportCapability | null>(null)
   const [exportState, setExportState] = useState<ExportState>({ status: "idle" })
   const [result, setResult] = useState<MilestoneResult | null>(null)
   const abortController = useRef<AbortController | null>(null)
   const resultUrl = useRef<string | null>(null)
+  const started = useRef(false)
+  const [captions, setCaptions] = useState(() => createMilestoneCaptions(10_000, "full"))
+  const [selectedCaptionStyle, setSelectedCaptionStyle] = useState<MilestoneCaptionStyle>("grateful")
 
   function revokeResultUrl() {
     if (resultUrl.current) {
@@ -51,9 +68,13 @@ export function MilestoneGenerator() {
   }
 
   useEffect(() => {
-    void getExportCapability()
-      .then(setCapability)
+    let cancelled = false
+    void getExportCapability(orientation)
+      .then((value) => {
+        if (!cancelled) setCapability(value)
+      })
       .catch(() => {
+        if (cancelled) return
         setCapability({
           canRenderVideo: false,
           preferredFormat: null,
@@ -62,7 +83,10 @@ export function MilestoneGenerator() {
           reason: "We could not check browser video support. You can still create a still image.",
         })
       })
-  }, [])
+    return () => {
+      cancelled = true
+    }
+  }, [orientation])
 
   useEffect(() => {
     return () => {
@@ -94,6 +118,10 @@ export function MilestoneGenerator() {
         setErrors((current) => ({ ...current, handle: message }))
         return
       }
+      if (!started.current) {
+        started.current = true
+        trackMilestoneEvent("milestone_started")
+      }
     }
     if (step === 1) {
       const message = validateFollowerCount(draft.followerCount)
@@ -102,6 +130,8 @@ export function MilestoneGenerator() {
         return
       }
     }
+    const completedStep = ["handle", "count", "identity", "output", "orientation"][step]
+    if (completedStep) trackMilestoneEvent("milestone_step_completed", { step: completedStep })
     setStep((current) => Math.min(WIZARD_STEP_COUNT - 1, current + 1))
   }
 
@@ -122,6 +152,9 @@ export function MilestoneGenerator() {
       handle: draft.handle,
       followerCount: parseFollowerCount(draft.followerCount),
       orientation,
+      numberFormat,
+      profileImageDataUrl: profileImage?.dataUrl ?? null,
+      imageTreatment: profileImage?.treatment ?? "photo",
     })
 
     if (!parsed.success) {
@@ -132,7 +165,26 @@ export function MilestoneGenerator() {
     return parsed.data
   }
 
-  async function createImage(input: MilestoneInput) {
+  function completeExport(
+    input: MilestoneInput,
+    blob: Blob,
+    filename: string,
+    kind: MilestoneResult["kind"],
+    startedAt: number,
+  ) {
+    publishResult(blob, filename, kind)
+    setCaptions(createMilestoneCaptions(input.followerCount, input.numberFormat))
+    setSelectedCaptionStyle("grateful")
+    trackMilestoneEvent("milestone_export_completed", {
+      output_type: kind,
+      orientation: input.orientation,
+      number_format: input.numberFormat,
+      has_image: Boolean(input.profileImageDataUrl),
+      duration_ms: Math.round(performance.now() - startedAt),
+    })
+  }
+
+  async function createImage(input: MilestoneInput, startedAt: number) {
     setExportState({ status: "exporting-image" })
     try {
       const { renderStillOnWeb } = await import("@remotion/web-renderer")
@@ -143,21 +195,37 @@ export function MilestoneGenerator() {
         allowHtmlInCanvas: true,
       })
       const blob = await rendered.blob({ format: "png" })
-      publishResult(blob, milestoneFilename(input.handle, input.followerCount, "png"), "image")
+      completeExport(
+        input,
+        blob,
+        milestoneFilename(input.handle, input.followerCount, input.numberFormat, "png"),
+        "image",
+        startedAt,
+      )
       setExportState({ status: "complete", message: "Your image is ready." })
       toast.success("Image ready")
     } catch (error) {
       console.error("Failed to export image", error)
+      trackMilestoneEvent("milestone_export_failed", {
+        output_type: "image",
+        stage: "image_render",
+        reason_code: "render_failed",
+      })
       setExportState({ status: "error", message: "We could not create the image. Please try again." })
     }
   }
 
-  async function createVideo(input: MilestoneInput) {
+  async function createVideo(input: MilestoneInput, startedAt: number) {
     setExportState({ status: "checking" })
     try {
-      const currentCapability = capability ?? (await getExportCapability())
+      const currentCapability = capability ?? (await getExportCapability(input.orientation))
       setCapability(currentCapability)
       if (!currentCapability.canRenderVideo || !currentCapability.preferredFormat) {
+        trackMilestoneEvent("milestone_export_failed", {
+          output_type: "video",
+          stage: "capability",
+          reason_code: "unsupported",
+        })
         setExportState({ status: "error", message: currentCapability.reason ?? "This browser cannot create a video locally." })
         return
       }
@@ -183,15 +251,31 @@ export function MilestoneGenerator() {
         onProgress: (progress) => setExportState({ status: "rendering", format, progress: progress.progress }),
       })
       const blob = await rendered.getBlob()
-      publishResult(blob, milestoneFilename(input.handle, input.followerCount, format), "video")
+      completeExport(
+        input,
+        blob,
+        milestoneFilename(input.handle, input.followerCount, input.numberFormat, format),
+        "video",
+        startedAt,
+      )
       setExportState({ status: "complete", message: `Your ${format.toUpperCase()} video is ready.` })
       toast.success(`${format.toUpperCase()} video ready`)
     } catch (error) {
       if (isAbortError(error)) {
+        trackMilestoneEvent("milestone_export_cancelled", {
+          orientation: input.orientation,
+          number_format: input.numberFormat,
+          has_image: Boolean(input.profileImageDataUrl),
+        })
         setExportState({ status: "idle" })
         toast.message("Video export cancelled")
       } else {
         console.error("Failed to export video", error)
+        trackMilestoneEvent("milestone_export_failed", {
+          output_type: "video",
+          stage: "video_render",
+          reason_code: "render_failed",
+        })
         setExportState({ status: "error", message: "We could not create the video. Keep this tab open and try again." })
       }
     } finally {
@@ -203,10 +287,17 @@ export function MilestoneGenerator() {
     if (busy) return
     const input = getValidInput()
     if (!input) return
+    const startedAt = performance.now()
+    trackMilestoneEvent("milestone_export_started", {
+      output_type: outputType,
+      orientation: input.orientation,
+      number_format: input.numberFormat,
+      has_image: Boolean(input.profileImageDataUrl),
+    })
     if (outputType === "image") {
-      void createImage(input)
+      void createImage(input, startedAt)
     } else {
-      void createVideo(input)
+      void createVideo(input, startedAt)
     }
   }
 
@@ -216,15 +307,16 @@ export function MilestoneGenerator() {
 
   function downloadResult() {
     if (!result) return
+    trackMilestoneEvent("milestone_downloaded", {
+      output_type: result.kind,
+      orientation,
+    })
     downloadBlob(result.blob, result.filename)
   }
 
   async function shareResult() {
     if (!result) return
-    const count = parseFollowerCount(draft.followerCount)
-    const text = count !== null
-      ? `I just hit ${formatFollowerCount(count)} followers on X 🎉`
-      : "I just hit a new follower milestone on X 🎉"
+    const text = captions[selectedCaptionStyle]
     const shareUrl = `${siteConfig.url}/milestone`
 
     const file = new File([result.blob], result.filename, { type: result.blob.type })
@@ -232,7 +324,12 @@ export function MilestoneGenerator() {
 
     if (canShareFile) {
       try {
-        await navigator.share({ files: [file], text })
+        await navigator.share({ files: [file], text, url: shareUrl })
+        trackMilestoneEvent("milestone_shared", {
+          method: "native",
+          output_type: result.kind,
+          caption_style: selectedCaptionStyle,
+        })
       } catch (error) {
         if (!isAbortError(error)) {
           console.error("Failed to share milestone", error)
@@ -246,7 +343,40 @@ export function MilestoneGenerator() {
     const intent = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`
     window.open(intent, "_blank", "noopener,noreferrer")
     downloadBlob(result.blob, result.filename)
+    trackMilestoneEvent("milestone_shared", {
+      method: "x_intent",
+      output_type: result.kind,
+      caption_style: selectedCaptionStyle,
+    })
     toast.message("Attach the downloaded file to your post on X")
+  }
+
+  function updateProfileImage(value: MilestoneProfileImage | null) {
+    setProfileImage(value)
+    clearExportResult()
+  }
+
+  function updateNumberFormat(value: MilestoneNumberFormat) {
+    setNumberFormat(value)
+    clearExportResult()
+  }
+
+  function updateOrientation(value: Orientation) {
+    setCapability(null)
+    setOrientation(value)
+    clearExportResult()
+  }
+
+  function updateCaption(style: MilestoneCaptionStyle, value: string) {
+    setCaptions((current) => ({ ...current, [style]: value }))
+  }
+
+  function handleCaptionCopied(style: MilestoneCaptionStyle) {
+    if (!result) return
+    trackMilestoneEvent("milestone_caption_copied", {
+      caption_style: style,
+      output_type: result.kind,
+    })
   }
 
   return (
@@ -283,20 +413,29 @@ export function MilestoneGenerator() {
             errors={errors}
             outputType={outputType}
             orientation={orientation}
+            numberFormat={numberFormat}
+            profileImage={profileImage}
             capability={capability}
             exportState={exportState}
             result={result}
+            captions={captions}
+            selectedCaptionStyle={selectedCaptionStyle}
             busy={busy}
             onChange={updateDraft}
             onNext={handleNext}
             onBack={handleBack}
             onSelectOutputType={setOutputType}
-            onSelectOrientation={setOrientation}
+            onSelectOrientation={updateOrientation}
+            onSelectNumberFormat={updateNumberFormat}
+            onProfileImageChange={updateProfileImage}
             onRender={handleRender}
             onCancel={cancelExport}
             onReset={handleReset}
             onShare={shareResult}
             onDownload={downloadResult}
+            onSelectCaptionStyle={setSelectedCaptionStyle}
+            onCaptionChange={updateCaption}
+            onCaptionCopied={handleCaptionCopied}
           />
         </div>
       </div>

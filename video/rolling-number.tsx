@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react"
 import { Easing, interpolate, useCurrentFrame } from "remotion"
-import { formatFullFollowerCount } from "../lib/milestone/formatters"
+import { formatMilestoneCount } from "../lib/milestone/formatters"
+import type { MilestoneNumberFormat } from "../types/milestone"
 
 // The design is tuned so a 6-character number (e.g. "10,000") fills the space.
 // Longer numbers scale down so they never overflow their container.
@@ -14,16 +15,30 @@ const ROLL_EASING = Easing.bezier(0.16, 1, 0.3, 1)
 
 // The frame at which the last digit column has finished rolling (its settle point).
 // Shared with the composition so the confetti burst is timed to the number landing.
-export function getNumberSettleFrame(value: number, startFrame: number): number {
-  const digitCount = formatFullFollowerCount(value).replace(/\D/g, "").length
+export function getNumberSettleFrame(
+  value: number,
+  startFrame: number,
+  numberFormat: MilestoneNumberFormat,
+): number {
+  const digitCount = formatMilestoneCount(value, numberFormat).replace(/\D/g, "").length
   return startFrame + Math.max(0, digitCount - 1) * COLUMN_STAGGER + ROLL_DURATION
 }
 
 type CharCell = { type: "digit"; value: number; order: number } | { type: "separator"; char: string }
 
-export function RollingNumber({ value, fontSize, startFrame = 0 }: { value: number; fontSize: number; startFrame?: number }) {
+export function RollingNumber({
+  value,
+  fontSize,
+  startFrame = 0,
+  numberFormat,
+}: {
+  value: number
+  fontSize: number
+  startFrame?: number
+  numberFormat: MilestoneNumberFormat
+}) {
   const frame = useCurrentFrame()
-  const text = formatFullFollowerCount(value)
+  const text = formatMilestoneCount(value, numberFormat)
   const scaledFontSize = fontSize * Math.min(1, REFERENCE_LENGTH / text.length)
   const digitHeight = scaledFontSize
 
@@ -35,7 +50,7 @@ export function RollingNumber({ value, fontSize, startFrame = 0 }: { value: numb
     }
     return { type: "separator", char }
   })
-  const settleFrame = getNumberSettleFrame(value, startFrame)
+  const settleFrame = getNumberSettleFrame(value, startFrame, numberFormat)
 
   const entrance = interpolate(frame, [startFrame - 6, startFrame + 14], [0, 1], {
     extrapolateLeft: "clamp",

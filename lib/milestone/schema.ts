@@ -8,7 +8,10 @@ export const milestoneInputSchema = z.object({
     message: "Use 1–15 letters, numbers, or underscores.",
   }),
   followerCount: z.number().int().min(1).max(999_999_999),
-  orientation: z.enum(["portrait", "landscape"]),
+  orientation: z.enum(["portrait", "square", "landscape"]),
+  numberFormat: z.enum(["full", "compact"]),
+  profileImageDataUrl: z.string().nullable(),
+  imageTreatment: z.enum(["photo", "logo"]),
 })
 
 export function validateHandle(value: string): string | null {

@@ -1,11 +1,24 @@
-export type Orientation = "portrait" | "landscape"
+export type Orientation = "portrait" | "square" | "landscape"
 
 export type OutputType = "image" | "video"
+
+export type MilestoneNumberFormat = "full" | "compact"
+
+export type MilestoneImageTreatment = "photo" | "logo"
+
+export type MilestoneProfileImage = {
+  dataUrl: string
+  filename: string
+  treatment: MilestoneImageTreatment
+}
 
 export type MilestoneInput = {
   handle: string
   followerCount: number
   orientation: Orientation
+  numberFormat: MilestoneNumberFormat
+  profileImageDataUrl: string | null
+  imageTreatment: MilestoneImageTreatment
 }
 
 export type MilestoneDraft = {
