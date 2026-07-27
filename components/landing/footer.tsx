@@ -97,6 +97,20 @@ export function Footer() {
                 style={{ height: 55, width: "auto" }}
               />
             </a>
+            <a
+              href="https://daniellaunches.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://daniellaunches.com/badge-light.svg"
+                alt="Featured on DanielLaunches"
+                width={220}
+                height={48}
+              />
+            </a>
           </div>
         </div>
       </div>
