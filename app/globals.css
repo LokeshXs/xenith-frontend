@@ -192,7 +192,7 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@keyframes creator-trial-gradient-shift {
+@keyframes trial-gradient-shift {
   0% {
     background-position: 0% 50%;
   }
@@ -204,7 +204,7 @@
   }
 }
 
-.creator-trial-gradient-button {
+.trial-gradient-button {
   position: relative;
   isolation: isolate;
   overflow: hidden;
@@ -223,10 +223,10 @@
     0 12px 30px color-mix(in oklch, var(--primary), transparent 82%),
     inset 0 1px 0 rgb(255 255 255 / 0.22),
     inset 0 -1px 0 rgb(0 0 0 / 0.14);
-  animation: creator-trial-gradient-shift 4.5s ease infinite;
+  animation: trial-gradient-shift 4.5s ease infinite;
 }
 
-.creator-trial-gradient-button::before {
+.trial-gradient-button::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -237,7 +237,7 @@
     linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 62%);
 }
 
-.creator-trial-gradient-button:hover {
+.trial-gradient-button:hover {
   color: #ffffff;
   transform: translateY(-1px);
   cursor: pointer;
@@ -248,7 +248,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .creator-trial-gradient-button {
+  .trial-gradient-button {
     animation: none;
   }
 }

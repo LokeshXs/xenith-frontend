@@ -12,14 +12,6 @@ import {
 
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -36,7 +28,7 @@ import {
   type UserPreferences,
 } from '@/lib/services/preferences'
 import {
-  cancelSubscription,
+  createBillingPortalSession,
   type BillingPlan,
   type BillingStatus,
   type BillingSubscriptionStatus,
@@ -227,7 +219,7 @@ export function SettingsForm({
 }: SettingsFormProps) {
   const { session } = useAuth()
   const [prefs, setPrefs] = useState<UserPreferences>(initialPreferences)
-  const [billing, setBilling] = useState<BillingStatus | null>(billingStatus)
+  const billing = billingStatus
   // Baseline we diff against for the dirty state. Re-set after a successful
   // save so the dirty bar hides and the next edit is detected correctly.
   const [baseline, setBaseline] = useState<UserPreferences>(initialPreferences)
@@ -236,10 +228,8 @@ export function SettingsForm({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [savedAt, setSavedAt] = useState<number | null>(null)
-  const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
-  const [cancelConfirmation, setCancelConfirmation] = useState('')
-  const [cancelling, setCancelling] = useState(false)
-  const [cancelError, setCancelError] = useState('')
+  const [openingBillingPortal, setOpeningBillingPortal] = useState(false)
+  const [billingPortalError, setBillingPortalError] = useState('')
   const minNiches = CREATOR_PLAN_LIMITS.minNiches
   const maxNiches = CREATOR_PLAN_LIMITS.maxNiches
   const minInspirationAccounts = CREATOR_PLAN_LIMITS.minInspirationAccounts
@@ -394,32 +384,30 @@ export function SettingsForm({
     setDraftAccount('')
   }
 
-  const handleCancelSubscription = async () => {
-    if (cancelConfirmation !== 'cancel') return
+  const handleOpenBillingPortal = async () => {
     const accessToken = session?.access_token
     if (!accessToken) {
-      setCancelError('Your session expired. Please sign in again.')
+      setBillingPortalError('Your session expired. Please sign in again.')
       return
     }
 
-    setCancelling(true)
-    setCancelError('')
-    const result = await cancelSubscription(accessToken)
-    setCancelling(false)
+    setOpeningBillingPortal(true)
+    setBillingPortalError('')
+    const result = await createBillingPortalSession(accessToken)
 
     if (result.kind === 'ok') {
-      setBilling(result.data)
-      setCancelDialogOpen(false)
-      setCancelConfirmation('')
+      window.location.assign(result.portalUrl)
       return
     }
+
+    setOpeningBillingPortal(false)
 
     if (result.kind === 'unauthorized') {
       window.location.assign('/login')
       return
     }
 
-    setCancelError(result.message)
+    setBillingPortalError(result.message)
   }
 
   const replyCredits = billing?.reply_credits ?? null
@@ -430,8 +418,6 @@ export function SettingsForm({
       )
     : 0
   const renewalDate = formatDate(replyCredits?.period_ends_at ?? null)
-  const canCancelSubscription =
-    Boolean(billing?.has_access) && !billing?.cancel_at_period_end
   const trialLabel = billing ? trialCountdownLabel(billing) : null
 
   return (
@@ -718,32 +704,46 @@ export function SettingsForm({
                 </div>
               </div>
 
-              {billing.cancel_at_period_end ? (
+              {billing.cancel_at_period_end && (
                 <p className="rounded-lg border border-border bg-muted/35 px-3 py-2 text-sm text-muted-foreground">
                   {billing.is_trialing
                     ? "Your trial is cancelled. You won't be charged. You can keep using Xenith until your trial access ends."
                     : "Your subscription is cancelled. You won't be charged again. You can keep using Xenith until your access ends."}
                 </p>
-              ) : canCancelSubscription ? (
+              )}
+
+              {billing.plan !== null && (
                 <div className="flex flex-col gap-2 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-muted-foreground">
-                    Cancel anytime. Your access stays active until the end of the
-                    paid period.
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm text-muted-foreground">
+                      View invoices, update your payment method, or manage your
+                      subscription securely with Dodo Payments.
+                    </p>
+                    {billingPortalError && (
+                      <p className="text-sm text-destructive">
+                        {billingPortalError}
+                      </p>
+                    )}
+                  </div>
                   <Button
                     type="button"
-                    variant="destructive"
-                    onClick={() => {
-                      setCancelError('')
-                      setCancelConfirmation('')
-                      setCancelDialogOpen(true)
-                    }}
-                    className="sm:w-fit"
+                    variant="outline"
+                    onClick={() => void handleOpenBillingPortal()}
+                    disabled={openingBillingPortal}
+                    className="shrink-0 sm:w-fit"
                   >
-                    Cancel subscription
+                    {openingBillingPortal && (
+                      <IconLoader2
+                        data-icon="inline-start"
+                        className="animate-spin"
+                      />
+                    )}
+                    {openingBillingPortal
+                      ? 'Opening billing…'
+                      : 'Manage billing & invoices'}
                   </Button>
                 </div>
-              ) : null}
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -802,67 +802,6 @@ export function SettingsForm({
         </div>
       )}
 
-      <Dialog
-        open={cancelDialogOpen}
-        onOpenChange={(open) => {
-          if (cancelling) return
-          setCancelDialogOpen(open)
-          if (!open) {
-            setCancelConfirmation('')
-            setCancelError('')
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cancel subscription</DialogTitle>
-            <DialogDescription>
-              Type cancel to schedule your subscription to end at the close of
-              the current billing period.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="cancel-confirmation">Confirmation word</Label>
-            <Input
-              id="cancel-confirmation"
-              value={cancelConfirmation}
-              onChange={(event) => {
-                setCancelConfirmation(event.target.value)
-                if (cancelError) setCancelError('')
-              }}
-              placeholder="cancel"
-              autoComplete="off"
-              aria-invalid={!!cancelError}
-            />
-            {cancelError && (
-              <p className="text-sm text-destructive">{cancelError}</p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => setCancelDialogOpen(false)}
-              disabled={cancelling}
-            >
-              Keep subscription
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => void handleCancelSubscription()}
-              disabled={cancelConfirmation !== 'cancel' || cancelling}
-            >
-              {cancelling && (
-                <IconLoader2 data-icon="inline-start" className="animate-spin" />
-              )}
-              {cancelling ? 'Cancelling…' : 'Cancel subscription'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

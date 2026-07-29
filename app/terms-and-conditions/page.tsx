@@ -75,11 +75,12 @@ const billingItems = [
   "Xenith may change plan features, pricing, limits, credit rules, and billing intervals prospectively.",
   "Checkout, payment methods, invoices, taxes, and payment processing are handled by Dodo Payments.",
   "Dodo Payments' buyer terms may apply to transactions.",
-  "Starting a subscription authorizes applicable recurring charges unless you cancel.",
-  "Any legacy trial access previously granted by Xenith may remain subject to its original trial length, eligibility, and limits.",
+  "Eligible Creator subscriptions include a 3-day free trial configured and managed through Dodo Payments.",
+  "Unless you cancel before the trial ends, the selected monthly or yearly subscription automatically begins and authorizes the applicable recurring charge.",
+  "Trial access is subject to product usage limits, including a limit of two suggested-reply generation sessions per local calendar day.",
   "You can cancel anytime from settings where cancellation is available.",
-  "Cancellation schedules the subscription to end at the close of the current billing period or any applicable legacy trial access period.",
-  "Access generally remains active until the end of the current paid period or applicable legacy trial access period, unless your account is terminated for violation of these Terms.",
+  "Cancellation schedules the subscription to end at the close of the current trial or paid billing period.",
+  "Access generally remains active until the end of the current trial or paid period, unless your account is terminated for violation of these Terms.",
   "Refund requests are reviewed case by case through support, with no guaranteed refund except where required by law or where Dodo Payments separately determines a refund is required or appropriate.",
   "Failed, disputed, reversed, or overdue payments may cause access to be paused, downgraded, or terminated.",
 ]
@@ -186,7 +187,7 @@ export default function Page() {
           </p>
         </div>
 
-        <p className="text-sm mb-6">Last Updated: 04-07-2026</p>
+        <p className="text-sm mb-6">Last Updated: 28-07-2026</p>
 
         <section className="mb-6">
           <h2 className="text-xl font-bold mb-2">Acceptance of Terms</h2>

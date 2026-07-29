@@ -37,7 +37,7 @@ export type BillingStatus = {
 }
 
 export type CheckoutResult =
-  | { kind: "ok"; checkoutUrl: string; trialApplied: boolean }
+  | { kind: "ok"; checkoutUrl: string }
   | { kind: "resumed"; data: BillingStatus }
   | { kind: "unauthorized" }
   | { kind: "conflict" }
@@ -50,6 +50,12 @@ export type BillingStatusResult =
 
 export type CancelSubscriptionResult =
   | { kind: "ok"; data: BillingStatus }
+  | { kind: "unauthorized" }
+  | { kind: "conflict"; message: string }
+  | { kind: "error"; message: string }
+
+export type BillingPortalResult =
+  | { kind: "ok"; portalUrl: string }
   | { kind: "unauthorized" }
   | { kind: "conflict"; message: string }
   | { kind: "error"; message: string }
@@ -106,7 +112,6 @@ export async function createCheckout(
 
     const data = (await response.json()) as {
       checkout_url?: string
-      trial_applied?: boolean
       resumed?: boolean
       billing?: BillingStatus
     }
@@ -124,7 +129,6 @@ export async function createCheckout(
     return {
       kind: "ok",
       checkoutUrl: data.checkout_url,
-      trialApplied: data.trial_applied ?? false,
     }
   } catch (error) {
     return {
@@ -156,6 +160,43 @@ export async function fetchBillingStatus(
     return {
       kind: "error",
       message: error instanceof Error ? error.message : "Unable to load billing status",
+    }
+  }
+}
+
+export async function createBillingPortalSession(
+  accessToken: string,
+): Promise<BillingPortalResult> {
+  try {
+    const response = await fetch(apiUrl("/api/billing/portal-session"), {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+
+    if (response.status === 401) return { kind: "unauthorized" }
+    if (response.status === 409) {
+      return {
+        kind: "conflict",
+        message: await errorMessage(response, "No billing account is available"),
+      }
+    }
+    if (!response.ok) {
+      return {
+        kind: "error",
+        message: await errorMessage(response, "Unable to open billing portal"),
+      }
+    }
+
+    const data = (await response.json()) as { portal_url?: string }
+    if (!data.portal_url?.trim()) {
+      return { kind: "error", message: "Billing portal URL was not returned" }
+    }
+
+    return { kind: "ok", portalUrl: data.portal_url }
+  } catch (error) {
+    return {
+      kind: "error",
+      message: error instanceof Error ? error.message : "Unable to open billing portal",
     }
   }
 }

@@ -82,6 +82,10 @@ export function CreatorPlanCard({
   )
   const selectedPlan = billingPlanForCycle(billing)
   const isSubmitting = submittingPlan === selectedPlan
+  const renewalPrice =
+    billing === "monthly"
+      ? `$${CREATOR_PLAN.monthly}/month`
+      : `$${CREATOR_PLAN.yearly * 12}/year`
 
   return (
     <div className="flex flex-col gap-6">
@@ -170,10 +174,10 @@ export function CreatorPlanCard({
             {isSubmitting && (
               <IconLoader2 data-icon="inline-start" className="animate-spin" />
             )}
-            {isSubmitting ? "Opening checkout…" : "Subscribe now"}
+            {isSubmitting ? "Opening checkout…" : "Start 3-day free trial"}
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Cancel anytime
+            3 days free trial, then {renewalPrice}. Cancel anytime.
           </p>
         </CardFooter>
       </Card>

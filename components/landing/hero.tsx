@@ -5,7 +5,6 @@ import { IconRosetteDiscountCheck, IconSparkles } from "@tabler/icons-react";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 import { Button } from "@/components/ui/button";
-import { CREATOR_TRIAL_POPUP_OPEN_EVENT } from "@/components/landing/creator-trial-popup";
 import { HeroShowcase } from "./showcase/hero-showcase";
 import Image from "next/image";
 
@@ -14,10 +13,6 @@ const EASE_OUT = [0.23, 1, 0.32, 1] as const;
 
 export function Hero() {
   const reduceMotion = useReducedMotion();
-
-  function openCreatorTrialPopup() {
-    window.dispatchEvent(new Event(CREATOR_TRIAL_POPUP_OPEN_EVENT));
-  }
 
   // Movement is dropped under reduced-motion; only opacity remains.
   const container: Variants = {
@@ -88,12 +83,12 @@ export function Hero() {
           </Button>
 
           <Button
-            type="button"
             size="lg"
-            className="creator-trial-gradient-button w-full min-w-[11.25rem] sm:w-auto"
-            onClick={openCreatorTrialPopup}
+            className="trial-gradient-button w-full min-w-[11.25rem] sm:w-auto"
+            nativeButton={false}
+            render={<Link href="#pricing" />}
           >
-            Request free trial
+            Start 3-day free trial
             <IconRosetteDiscountCheck data-icon="inline-end" aria-hidden />
           </Button>
         </motion.div>
