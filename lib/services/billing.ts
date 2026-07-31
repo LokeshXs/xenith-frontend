@@ -36,11 +36,18 @@ export type BillingStatus = {
   reply_credits: ReplyCreditSummary
 }
 
+export type CheckoutConflictCode = "PLAN_MISMATCH" | "SUBSCRIPTION_ON_HOLD"
+
+const CHECKOUT_CONFLICT_CODES: readonly CheckoutConflictCode[] = [
+  "PLAN_MISMATCH",
+  "SUBSCRIPTION_ON_HOLD",
+]
+
 export type CheckoutResult =
   | { kind: "ok"; checkoutUrl: string }
   | { kind: "resumed"; data: BillingStatus }
   | { kind: "unauthorized" }
-  | { kind: "conflict" }
+  | { kind: "conflict"; code: CheckoutConflictCode | null; currentPlan: BillingPlan | null }
   | { kind: "error"; message: string }
 
 export type BillingStatusResult =
@@ -56,6 +63,12 @@ export type CancelSubscriptionResult =
 
 export type BillingPortalResult =
   | { kind: "ok"; portalUrl: string }
+  | { kind: "unauthorized" }
+  | { kind: "conflict"; message: string }
+  | { kind: "error"; message: string }
+
+export type ChangePlanResult =
+  | { kind: "ok"; data: BillingStatus }
   | { kind: "unauthorized" }
   | { kind: "conflict"; message: string }
   | { kind: "error"; message: string }
@@ -102,7 +115,24 @@ export async function createCheckout(
     })
 
     if (response.status === 401) return { kind: "unauthorized" }
-    if (response.status === 409) return { kind: "conflict" }
+    if (response.status === 409) {
+      try {
+        const data = (await response.json()) as {
+          code?: string
+          current_plan?: string
+        }
+        return {
+          kind: "conflict",
+          code:
+            CHECKOUT_CONFLICT_CODES.find((code) => code === data.code) ?? null,
+          currentPlan: isBillingPlan(data.current_plan ?? null)
+            ? (data.current_plan as BillingPlan)
+            : null,
+        }
+      } catch {
+        return { kind: "conflict", code: null, currentPlan: null }
+      }
+    }
     if (!response.ok) {
       return {
         kind: "error",
@@ -233,6 +263,43 @@ export async function cancelSubscription(
     return {
       kind: "error",
       message: error instanceof Error ? error.message : "Unable to cancel subscription",
+    }
+  }
+}
+
+export async function changePlan(
+  accessToken: string,
+  plan: BillingPlan,
+): Promise<ChangePlanResult> {
+  try {
+    const response = await fetch(apiUrl("/api/billing/change-plan"), {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ plan }),
+    })
+
+    if (response.status === 401) return { kind: "unauthorized" }
+    if (response.status === 409) {
+      return {
+        kind: "conflict",
+        message: await errorMessage(response, "Plan change is unavailable"),
+      }
+    }
+    if (!response.ok) {
+      return {
+        kind: "error",
+        message: await errorMessage(response, "Unable to change plan"),
+      }
+    }
+
+    return { kind: "ok", data: (await response.json()) as BillingStatus }
+  } catch (error) {
+    return {
+      kind: "error",
+      message: error instanceof Error ? error.message : "Unable to change plan",
     }
   }
 }

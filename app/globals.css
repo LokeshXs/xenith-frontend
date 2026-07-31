@@ -204,6 +204,17 @@
   }
 }
 
+@keyframes trial-button-shine {
+  0%,
+  18% {
+    transform: translateX(-180%) skewX(-22deg);
+  }
+  55%,
+  100% {
+    transform: translateX(320%) skewX(-22deg);
+  }
+}
+
 .trial-gradient-button {
   position: relative;
   isolation: isolate;
@@ -237,6 +248,25 @@
     linear-gradient(180deg, rgb(255 255 255 / 0.1), transparent 62%);
 }
 
+.trial-gradient-button::after {
+  content: "";
+  position: absolute;
+  top: -50%;
+  bottom: -50%;
+  left: -30%;
+  width: 26%;
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.5),
+    transparent
+  );
+  filter: blur(1px);
+  transform: translateX(-180%) skewX(-22deg);
+  animation: trial-button-shine 3.2s ease-in-out infinite;
+}
+
 .trial-gradient-button:hover {
   color: #ffffff;
   transform: translateY(-1px);
@@ -248,7 +278,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .trial-gradient-button {
+  .trial-gradient-button,
+  .trial-gradient-button::after {
     animation: none;
   }
 }

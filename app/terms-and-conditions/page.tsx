@@ -71,7 +71,8 @@ const acceptableUseItems = [
 const billingItems = [
   "Xenith offers a Creator plan with monthly and yearly billing options.",
   "Current displayed pricing is $24 per month for monthly billing and $20 per month billed annually for yearly billing.",
-  "The Creator plan currently includes 10 post drafts per day, 1,000 reply credits, post scheduling, tracking and analysis across up to 10 X profiles, and X algorithm-based analytics.",
+  "The Creator plan currently includes 10 post drafts per day, 1,000 reply credits per month, post scheduling, tracking and analysis across up to 10 X profiles, and X algorithm-based analytics.",
+  "Reply credits refresh monthly on both the monthly and yearly plans, and unused credits do not carry over to the next month.",
   "Xenith may change plan features, pricing, limits, credit rules, and billing intervals prospectively.",
   "Checkout, payment methods, invoices, taxes, and payment processing are handled by Dodo Payments.",
   "Dodo Payments' buyer terms may apply to transactions.",

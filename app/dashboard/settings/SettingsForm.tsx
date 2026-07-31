@@ -6,13 +6,21 @@ import {
   IconCheck,
   IconCreditCard,
   IconLoader2,
-  IconPlus,
-  IconX,
 } from '@tabler/icons-react'
 
+import { toast } from 'sonner'
+
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { InspirationAccountPicker } from '@/components/inspiration-account-picker'
 import { Label } from '@/components/ui/label'
 import {
   Select,
@@ -23,12 +31,15 @@ import {
 } from '@/components/ui/select'
 import { TimePicker } from '@/components/ui/time-picker'
 import { cn } from '@/lib/utils'
+import { CREATOR_PRICING } from '@/lib/pricing'
 import {
   updateUserPreferences,
   type UserPreferences,
 } from '@/lib/services/preferences'
 import {
+  changePlan,
   createBillingPortalSession,
+  fetchBillingStatus,
   type BillingPlan,
   type BillingStatus,
   type BillingSubscriptionStatus,
@@ -57,20 +68,15 @@ const REPLY_COUNT_OPTIONS = [
 const PLAN_DETAILS = {
   creator: {
     name: 'Creator Monthly',
-    price: '$24 / month',
+    price: `$${CREATOR_PRICING.monthly} / month`,
     cadence: 'Billed monthly',
   },
   'creator-yearly': {
     name: 'Creator Yearly',
-    price: '$20 / month',
+    price: `$${CREATOR_PRICING.yearly} / month`,
     cadence: 'Billed annually',
   },
-} as const satisfies Record<
-  BillingPlan,
-  { name: string; price: string; cadence: string }
->
-
-const USERNAME_REGEX = /^[A-Za-z0-9_]{1,15}$/
+} satisfies Record<BillingPlan, { name: string; price: string; cadence: string }>
 
 function arrayEquals(a: string[], b: string[]) {
   if (a.length !== b.length) return false
@@ -219,17 +225,18 @@ export function SettingsForm({
 }: SettingsFormProps) {
   const { session } = useAuth()
   const [prefs, setPrefs] = useState<UserPreferences>(initialPreferences)
-  const billing = billingStatus
+  const [billing, setBilling] = useState<BillingStatus | null>(billingStatus)
   // Baseline we diff against for the dirty state. Re-set after a successful
   // save so the dirty bar hides and the next edit is detected correctly.
   const [baseline, setBaseline] = useState<UserPreferences>(initialPreferences)
-  const [draftAccount, setDraftAccount] = useState('')
-  const [accountError, setAccountError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [openingBillingPortal, setOpeningBillingPortal] = useState(false)
   const [billingPortalError, setBillingPortalError] = useState('')
+  const [switchingPlan, setSwitchingPlan] = useState(false)
+  const [switchDialogOpen, setSwitchDialogOpen] = useState(false)
+  const [switchError, setSwitchError] = useState('')
   const minNiches = CREATOR_PLAN_LIMITS.minNiches
   const maxNiches = CREATOR_PLAN_LIMITS.maxNiches
   const minInspirationAccounts = CREATOR_PLAN_LIMITS.minInspirationAccounts
@@ -263,41 +270,6 @@ export function SettingsForm({
         : [...list, value]
       return { ...p, [key]: next }
     })
-  }
-
-  const addAccount = () => {
-    const normalized = draftAccount.trim().replace(/^@+/, '')
-    if (!normalized) return
-    if (prefs.inspirationAccounts.length >= maxInspirationAccounts) {
-      setAccountError(`You can add up to ${maxInspirationAccounts} accounts.`)
-      return
-    }
-    if (!USERNAME_REGEX.test(normalized)) {
-      setAccountError('Use 1–15 letters, numbers, or underscores.')
-      return
-    }
-    if (
-      prefs.inspirationAccounts.some(
-        (a) => a.toLowerCase() === normalized.toLowerCase(),
-      )
-    ) {
-      setAccountError('Already added.')
-      setDraftAccount('')
-      return
-    }
-    setPrefs((p) => ({
-      ...p,
-      inspirationAccounts: [...p.inspirationAccounts, normalized],
-    }))
-    setDraftAccount('')
-    setAccountError('')
-  }
-
-  const removeAccount = (name: string) => {
-    setPrefs((p) => ({
-      ...p,
-      inspirationAccounts: p.inspirationAccounts.filter((a) => a !== name),
-    }))
   }
 
   const handleSave = async () => {
@@ -355,16 +327,16 @@ export function SettingsForm({
       setBaseline(next)
       setSavedAt(Date.now())
     } catch (err) {
-      // Pull the API's validation message ({ error: string }) on 400; the axios
+      // Pull the API's actionable validation/verification message. The axios
       // interceptor already handles 401. 404 means the row was deleted between
-      // load and save — rare, but surface a useful message rather than the
-      // raw "Preferences not found."
+      // load and save — rare, but surface a useful message rather than the raw
+      // "Preferences not found."
       if (isAxiosError(err)) {
         const status = err.response?.status
         const apiMessage = err.response?.data?.error as string | undefined
         if (status === 404) {
           setSaveError('No saved preferences yet — finish onboarding first.')
-        } else if (status === 400 && apiMessage) {
+        } else if (apiMessage && [400, 409, 422, 429, 503].includes(status ?? 0)) {
           setSaveError(apiMessage)
         } else {
           setSaveError("Couldn't save your preferences. Please try again.")
@@ -379,9 +351,7 @@ export function SettingsForm({
 
   const handleReset = () => {
     setPrefs(baseline)
-    setAccountError('')
     setSaveError('')
-    setDraftAccount('')
   }
 
   const handleOpenBillingPortal = async () => {
@@ -410,6 +380,67 @@ export function SettingsForm({
     setBillingPortalError(result.message)
   }
 
+  const targetPlan: BillingPlan | null =
+    billing?.plan === 'creator'
+      ? 'creator-yearly'
+      : billing?.plan === 'creator-yearly'
+        ? 'creator'
+        : null
+  // Mirrors the backend gate so the button never opens a guaranteed-409 flow.
+  // Trial users are excluded: Dodo's immediate proration would end the trial
+  // and charge the full new-plan price right away.
+  const canSwitchPlan = Boolean(
+    billing &&
+      targetPlan &&
+      billing.has_access &&
+      billing.status === 'active' &&
+      !billing.is_trialing,
+  )
+  const targetPlanDetails = targetPlan ? PLAN_DETAILS[targetPlan] : null
+  const targetRenewalLabel =
+    targetPlan === 'creator-yearly'
+      ? `$${CREATOR_PRICING.yearly * 12}/year`
+      : `$${CREATOR_PRICING.monthly}/month`
+
+  const refreshBillingStatus = async () => {
+    const accessToken = session?.access_token
+    if (!accessToken) return
+    const result = await fetchBillingStatus(accessToken)
+    if (result.kind === 'ok') setBilling(result.data)
+  }
+
+  const handleSwitchPlan = async () => {
+    const accessToken = session?.access_token
+    if (!accessToken || !targetPlan) {
+      setSwitchError('Your session expired. Please sign in again.')
+      return
+    }
+
+    setSwitchingPlan(true)
+    setSwitchError('')
+    const result = await changePlan(accessToken, targetPlan)
+    setSwitchingPlan(false)
+
+    if (result.kind === 'ok') {
+      setBilling(result.data)
+      setSwitchDialogOpen(false)
+      toast.success('Plan updated', {
+        description: `You are now on ${planName(result.data.plan ?? targetPlan)}.`,
+      })
+      return
+    }
+
+    if (result.kind === 'unauthorized') {
+      window.location.assign('/login')
+      return
+    }
+
+    setSwitchError(result.message)
+    // The change may have succeeded at Dodo even if the local sync failed —
+    // refetch so the UI self-heals once the webhook reconciles.
+    void refreshBillingStatus()
+  }
+
   const replyCredits = billing?.reply_credits ?? null
   const usedPercent = replyCredits?.period_granted
     ? Math.min(
@@ -425,7 +456,7 @@ export function SettingsForm({
       <div className="divide-y divide-border ">
         <Section
           title="Reply credits"
-          description="Current subscription period usage."
+          description="This month's usage. Credits refresh monthly on every plan."
           
         >
           {replyCredits ? (
@@ -457,9 +488,7 @@ export function SettingsForm({
                     {replyCredits.period_used} used of {replyCredits.period_granted}
                   </span>
                   <span>
-                    {renewalDate
-                      ? `Renews ${renewalDate}`
-                      : 'Renews with your next billing period'}
+                    {renewalDate ? `Renews ${renewalDate}` : 'Renews monthly'}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -503,71 +532,22 @@ export function SettingsForm({
 
         <Section
           title="Inspiration"
-          description={`Add ${minInspirationAccounts} to ${maxInspirationAccounts} X accounts we'll learn voice and style from.`}
+          description={`Search for and select ${minInspirationAccounts} to ${maxInspirationAccounts} public X accounts we'll learn voice and style from.`}
         >
           <div className="flex flex-col gap-3">
-            <div className="flex gap-2">
-              <Input
-                placeholder="@username"
-                value={draftAccount}
-                onChange={(e) => {
-                  setDraftAccount(e.target.value)
-                  if (accountError) setAccountError('')
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    addAccount()
-                  }
-                }}
-                aria-invalid={!!accountError}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={addAccount}
-                disabled={
-                  !draftAccount.trim() ||
-                  prefs.inspirationAccounts.length >= maxInspirationAccounts
-                }
-              >
-                <IconPlus />
-                Add
-              </Button>
-            </div>
-            {accountError && (
-              <p className="text-sm text-destructive">{accountError}</p>
-            )}
-            {!accountError && (
-              <p className="text-xs text-muted-foreground">
-                {prefs.inspirationAccounts.length} / {maxInspirationAccounts}{' '}
-                added
-                {prefs.inspirationAccounts.length < minInspirationAccounts
-                  ? `. Add at least ${minInspirationAccounts} to continue.`
-                  : ''}
-              </p>
-            )}
-            {prefs.inspirationAccounts.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {prefs.inspirationAccounts.map((name) => (
-                  <Badge
-                    key={name}
-                    variant="secondary"
-                    className="gap-1 pl-2.5 pr-1"
-                  >
-                    @{name}
-                    <button
-                      type="button"
-                      onClick={() => removeAccount(name)}
-                      aria-label={`Remove @${name}`}
-                      className="-mr-0.5 ml-0.5 inline-flex size-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
-                    >
-                      <IconX className="size-3.5" />
-                    </button>
-                  </Badge>
-                ))}
-              </div>
-            )}
+            <InspirationAccountPicker
+              accounts={prefs.inspirationAccounts}
+              maxAccounts={maxInspirationAccounts}
+              onChange={(inspirationAccounts) =>
+                setPrefs((current) => ({ ...current, inspirationAccounts }))
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              {prefs.inspirationAccounts.length} / {maxInspirationAccounts} selected
+              {prefs.inspirationAccounts.length < minInspirationAccounts
+                ? `. Select at least ${minInspirationAccounts} to save.`
+                : ''}
+            </p>
           </div>
         </Section>
 
@@ -725,25 +705,91 @@ export function SettingsForm({
                       </p>
                     )}
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => void handleOpenBillingPortal()}
-                    disabled={openingBillingPortal}
-                    className="shrink-0 sm:w-fit"
-                  >
-                    {openingBillingPortal && (
-                      <IconLoader2
-                        data-icon="inline-start"
-                        className="animate-spin"
-                      />
+                  <div className="flex shrink-0 flex-col gap-2 sm:flex-row">
+                    {canSwitchPlan && targetPlanDetails && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setSwitchError('')
+                          setSwitchDialogOpen(true)
+                        }}
+                        className="sm:w-fit"
+                      >
+                        Switch to {targetPlanDetails.name}
+                      </Button>
                     )}
-                    {openingBillingPortal
-                      ? 'Opening billing…'
-                      : 'Manage billing & invoices'}
-                  </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleOpenBillingPortal()}
+                      disabled={openingBillingPortal}
+                      className="sm:w-fit"
+                    >
+                      {openingBillingPortal && (
+                        <IconLoader2
+                          data-icon="inline-start"
+                          className="animate-spin"
+                        />
+                      )}
+                      {openingBillingPortal
+                        ? 'Opening billing…'
+                        : 'Manage billing & invoices'}
+                    </Button>
+                  </div>
                 </div>
               )}
+
+              <AlertDialog
+                open={switchDialogOpen}
+                onOpenChange={(open) => {
+                  if (!switchingPlan) setSwitchDialogOpen(open)
+                }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Switch to {targetPlanDetails?.name}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Your plan changes immediately. Dodo Payments will charge
+                      or credit the prorated difference for the remainder of
+                      your current billing period, and your renewal moves to{' '}
+                      {targetRenewalLabel}.
+                      {billing.cancel_at_period_end &&
+                        ' This also resumes your subscription — it will no longer cancel at the period end.'}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  {switchError && (
+                    <p className="text-sm text-destructive">{switchError}</p>
+                  )}
+                  <AlertDialogFooter>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={switchingPlan}
+                      onClick={() => setSwitchDialogOpen(false)}
+                    >
+                      Keep current plan
+                    </Button>
+                    <Button
+                      type="button"
+                      disabled={switchingPlan}
+                      onClick={() => void handleSwitchPlan()}
+                    >
+                      {switchingPlan && (
+                        <IconLoader2
+                          data-icon="inline-start"
+                          className="animate-spin"
+                        />
+                      )}
+                      {switchingPlan
+                        ? 'Switching…'
+                        : `Switch to ${targetPlanDetails?.name}`}
+                    </Button>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">

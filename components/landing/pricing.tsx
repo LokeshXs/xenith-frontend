@@ -50,6 +50,13 @@ export function Pricing() {
       }
 
       if (result.kind === "conflict") {
+        if (result.code === "PLAN_MISMATCH") {
+          toast("You already have an active subscription", {
+            description: "Switch plans from your billing settings.",
+          })
+          window.location.assign("/dashboard/settings")
+          return
+        }
         window.location.assign(await postAuthAppRoute(session.access_token))
         return
       }

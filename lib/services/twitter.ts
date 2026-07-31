@@ -16,9 +16,27 @@ export interface TwitterStatus {
   needsReconnect?: boolean
 }
 
+export interface XAccountSearchResult {
+  id: string
+  username: string
+  name?: string
+  avatar?: string
+}
+
 export async function getTwitterStatus(): Promise<TwitterStatus> {
   const { data } = await apiClient.get<TwitterStatus>('/twitter/status')
   return data
+}
+
+export async function searchXUsers(
+  query: string,
+  signal?: AbortSignal,
+): Promise<XAccountSearchResult[]> {
+  const { data } = await apiClient.get<{ data: XAccountSearchResult[] }>(
+    '/twitter/users/search',
+    { params: { query }, signal },
+  )
+  return data.data
 }
 
 export async function getTwitterAuthUrl(redirectTo?: string): Promise<string> {

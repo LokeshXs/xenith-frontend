@@ -1,10 +1,16 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { IconAlertCircle, IconLoader2, IconRefresh } from "@tabler/icons-react";
+import {
+  IconAlertCircle,
+  IconCreditCard,
+  IconLoader2,
+  IconRefresh,
+} from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import {
+  createBillingPortalSession,
   createCheckout,
   fetchBillingStatus,
   type BillingPlan,
@@ -39,6 +45,7 @@ export function OnboardingBillingGate({
     "unpaid",
   );
   const [submittingPlan, setSubmittingPlan] = useState<BillingPlan | null>(null);
+  const [openingPortal, setOpeningPortal] = useState(false);
   const checkoutInFlight = useRef(false);
 
   const loadStatus = useCallback(async () => {
@@ -101,6 +108,25 @@ export function OnboardingBillingGate({
     [accessToken, loadStatus],
   );
 
+  const openPortal = useCallback(async () => {
+    setOpeningPortal(true);
+    const result = await createBillingPortalSession(accessToken);
+
+    if (result.kind === "ok") {
+      window.location.assign(result.portalUrl);
+      return;
+    }
+
+    setOpeningPortal(false);
+
+    if (result.kind === "unauthorized") {
+      window.location.assign("/signout");
+      return;
+    }
+
+    toast.error(result.message);
+  }, [accessToken]);
+
   const copy = billingGateCopy(initialSubscription.status);
 
   if (status === "checking") {
@@ -124,6 +150,35 @@ export function OnboardingBillingGate({
             <IconRefresh data-icon="inline-start" />
             Try again
           </Button>
+        }
+      />
+    );
+  }
+
+  // An on-hold subscription still exists at Dodo — a new checkout would
+  // create a duplicate. Recovery is fixing the payment method in the portal.
+  if (initialSubscription.status === "on_hold") {
+    return (
+      <OnboardingStateCard
+        icon={<IconCreditCard className="size-9 text-destructive" />}
+        title="Your subscription is on hold"
+        description="A payment failed, so your subscription is paused. Update your payment method with Dodo Payments to resume it — you don't need a new plan."
+        action={
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              onClick={() => void openPortal()}
+              disabled={openingPortal}
+            >
+              {openingPortal && (
+                <IconLoader2 data-icon="inline-start" className="animate-spin" />
+              )}
+              {openingPortal ? "Opening billing…" : "Update payment method"}
+            </Button>
+            <Button variant="outline" onClick={() => void loadStatus()}>
+              <IconRefresh data-icon="inline-start" />
+              Check again
+            </Button>
+          </div>
         }
       />
     );
@@ -164,13 +219,6 @@ function billingGateCopy(status: BillingSubscriptionStatus): {
     return {
       title: "Your subscription is cancelled",
       description: "Choose a Creator plan to reactivate your workspace.",
-    };
-  }
-
-  if (status === "on_hold") {
-    return {
-      title: "Your subscription is on hold",
-      description: "Choose a Creator plan to restore access to your workspace.",
     };
   }
 

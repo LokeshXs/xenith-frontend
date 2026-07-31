@@ -32,9 +32,9 @@ const CREATOR_PLAN = {
   features: [
     { label: "10 post drafts per day" },
     {
-      label: "1,000 reply credits",
+      label: "1,000 reply credits per month",
       tooltip:
-        "Use your 1,000 credits to catch high-traction posts early with suggested replies.",
+        "Use your 1,000 monthly credits to catch high-traction posts early with suggested replies. Credits refresh every month on both the monthly and yearly plans.",
     },
     { label: "Schedule as many posts as you want" },
     {

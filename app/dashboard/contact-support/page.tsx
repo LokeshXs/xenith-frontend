@@ -16,7 +16,7 @@ export default async function ContactSupportPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-4 sm:p-6 md:p-8 max-w-2xl w-full mx-auto">
+    <div className="mx-auto flex w-full max-w-5xl flex-col p-4 sm:p-6 md:p-8">
       <ContactSupportClient />
     </div>
   )
