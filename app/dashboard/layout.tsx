@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { BackendStatusGate } from '@/components/backend-status-gate'
+import { BillingGraceBanner } from '@/components/billing/billing-grace-banner'
 import { checkBackendHealth } from '@/lib/services/health'
 import { fetchUserRequirementsStatus } from '@/lib/services/user-requirements'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
@@ -56,6 +57,16 @@ export default async function DashboardLayout({
       <SidebarInset>
         <TwitterConnectGate />
         <DashboardMobileHeader />
+        {/* The requirements payload already carries the subscription status and
+            grace end, so the banner costs no extra request. */}
+        <BillingGraceBanner
+          className="m-4 mb-0"
+          accessToken={session.access_token}
+          status={requirements.data.requirements.subscription.status}
+          accessExpiresAt={
+            requirements.data.requirements.subscription.accessExpiresAt
+          }
+        />
         {children}
       </SidebarInset>
     </SidebarProvider>

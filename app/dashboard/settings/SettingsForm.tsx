@@ -159,6 +159,9 @@ function statusLabel(
   hasAccess: boolean,
   cancelAtPeriodEnd: boolean,
 ) {
+  // Ahead of the cancelled branch: a held subscription can also have a scheduled
+  // cancellation, and "Cancelled" would hide the thing that actually needs fixing.
+  if (status === 'on_hold') return 'On hold'
   if (cancelAtPeriodEnd && hasAccess) return 'Cancelled'
   if (status === 'free') return 'Free'
   return status
@@ -168,6 +171,7 @@ function statusLabel(
 }
 
 function billingDateTileLabel(billing: BillingStatus) {
+  if (billing.status === 'on_hold') return 'Access ends'
   if (billing.cancel_at_period_end) {
     return billing.is_trialing ? 'Trial cancelled' : 'Subscription cancelled'
   }
@@ -185,6 +189,15 @@ function periodLabel(billing: BillingStatus) {
   const trialEndDate = formatDate(billing.trial_ends_at)
   const endDate = formatDate(billing.access_expires_at ?? billing.next_billing_date)
   const renewalDate = formatDate(billing.next_billing_date ?? billing.access_expires_at)
+
+  // First, above the trial branch: access_expires_at is the end of the grace
+  // window here, and nothing else on this screen should claim the subscription is
+  // renewing or that a trial is still running.
+  if (billing.status === 'on_hold') {
+    return endDate
+      ? `Payment failed — access ends on ${endDate}`
+      : 'Payment failed — access ends soon'
+  }
 
   if (billing.is_trialing) {
     if (billing.cancel_at_period_end) {
@@ -630,7 +643,15 @@ export function SettingsForm({
                       {planName(billing.plan)}
                     </h3>
                     <Badge
-                      variant={billing.has_access ? 'default' : 'secondary'}
+                      variant={
+                        // has_access is true throughout the grace window, so it
+                        // alone would render a failed payment as a normal badge.
+                        billing.status === 'on_hold'
+                          ? 'destructive'
+                          : billing.has_access
+                            ? 'default'
+                            : 'secondary'
+                      }
                       className="capitalize"
                     >
                       {statusLabel(

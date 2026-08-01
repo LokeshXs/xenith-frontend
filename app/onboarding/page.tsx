@@ -12,17 +12,25 @@ import { checkBackendHealth } from "@/lib/services/health";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { OnboardingStatusError } from "./components/OnboardingStatusError";
 import { OnboardingBillingGate } from "./components/OnboardingBillingGate";
+import { BillingGraceBanner } from "@/components/billing/billing-grace-banner";
 
 export const metadata: Metadata = {
   title: "Onboarding",
   robots: { index: false, follow: false },
 };
 
-function OnboardingShell({ children }: { children: React.ReactNode }) {
+function OnboardingShell({
+  banner,
+  children,
+}: {
+  banner?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
     <main className="relative min-h-dvh bg-background p-4 sm:p-6 md:p-8">
       <LogoutButton className="absolute right-4 top-4 z-10 sm:right-6 sm:top-6" />
-      <div className="flex min-h-[calc(100dvh-2rem)] items-center justify-center sm:min-h-[calc(100dvh-3rem)] md:min-h-[calc(100dvh-4rem)]">
+      <div className="flex min-h-[calc(100dvh-2rem)] flex-col items-center justify-center gap-6 sm:min-h-[calc(100dvh-3rem)] md:min-h-[calc(100dvh-4rem)]">
+        {banner}
         {children}
       </div>
     </main>
@@ -106,7 +114,19 @@ export default async function Page() {
   }
 
   return (
-    <OnboardingShell>
+    // Grace makes subscription.satisfied true, so this cohort never reaches the
+    // billing gate's on-hold card above — without the banner here a user who is
+    // mid-onboarding when their payment fails would see nothing at all.
+    <OnboardingShell
+      banner={
+        <BillingGraceBanner
+          className="w-full max-w-3xl"
+          accessToken={session.access_token}
+          status={result.data.requirements.subscription.status}
+          accessExpiresAt={result.data.requirements.subscription.accessExpiresAt}
+        />
+      }
+    >
       <MultistepForm
         initialStep={initialStep}
         statusSteps={statusSteps}
