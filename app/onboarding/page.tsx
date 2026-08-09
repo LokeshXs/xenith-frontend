@@ -11,7 +11,6 @@ import { BackendStatusGate } from "@/components/backend-status-gate";
 import { checkBackendHealth } from "@/lib/services/health";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { OnboardingStatusError } from "./components/OnboardingStatusError";
-import { OnboardingBillingGate } from "./components/OnboardingBillingGate";
 import { BillingGraceBanner } from "@/components/billing/billing-grace-banner";
 
 export const metadata: Metadata = {
@@ -76,17 +75,6 @@ export default async function Page() {
     redirect("/dashboard");
   }
 
-  if (!result.data.requirements.subscription.satisfied) {
-    return (
-      <OnboardingShell>
-        <OnboardingBillingGate
-          accessToken={session.access_token}
-          initialSubscription={result.data.requirements.subscription}
-        />
-      </OnboardingShell>
-    );
-  }
-
   const statusSteps = requirementStepsFromStatus(result.data);
   const initialStep = result.data.onboarding.resumeStep;
   const shouldHydrateNicheSuggestions =
@@ -114,9 +102,8 @@ export default async function Page() {
   }
 
   return (
-    // Grace makes subscription.satisfied true, so this cohort never reaches the
-    // billing gate's on-hold card above — without the banner here a user who is
-    // mid-onboarding when their payment fails would see nothing at all.
+    // Existing subscribers whose renewal is on hold can finish onboarding during
+    // grace, but should still see the payment-recovery countdown.
     <OnboardingShell
       banner={
         <BillingGraceBanner

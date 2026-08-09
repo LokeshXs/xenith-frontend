@@ -67,11 +67,15 @@ export function CreatorPlanCard({
   onBillingChange,
   submittingPlan,
   onSubscribe,
+  ctaLabel = "Start 3-day free trial",
+  showTrialTerms = true,
 }: {
   billing: CreatorBillingCycle
   onBillingChange: (billing: CreatorBillingCycle) => void
   submittingPlan: BillingPlan | null
   onSubscribe: (plan: BillingPlan) => Promise<void>
+  ctaLabel?: string
+  showTrialTerms?: boolean
 }) {
   const reduceMotion = useReducedMotion()
   const price =
@@ -174,10 +178,12 @@ export function CreatorPlanCard({
             {isSubmitting && (
               <IconLoader2 data-icon="inline-start" className="animate-spin" />
             )}
-            {isSubmitting ? "Opening checkout…" : "Start 3-day free trial"}
+            {isSubmitting ? "Opening checkout…" : ctaLabel}
           </Button>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            3 days free trial, then {renewalPrice}. Cancel anytime.
+            {showTrialTerms
+              ? `3 days free trial, then ${renewalPrice}. Cancel anytime.`
+              : "Secure checkout with Dodo Payments. Cancel anytime."}
           </p>
         </CardFooter>
       </Card>

@@ -4,7 +4,6 @@ import type {
 } from "@/lib/services/billing";
 
 export type UserRequirementKey =
-  | "subscription"
   | "xAccount"
   | "styleProfile"
   | "preferences";
@@ -21,11 +20,15 @@ export type UserRequirementsStatus = {
   blockingRequirement: UserRequirementKey | null;
   requirements: {
     subscription: {
-      satisfied: boolean;
+      available: boolean;
       plan: BillingPlan | null;
       status: BillingSubscriptionStatus;
       hasAccess: boolean;
       accessExpiresAt: string | null;
+      cancelAtPeriodEnd: boolean;
+      trialEndsAt: string | null;
+      isTrialing: boolean;
+      trialDaysRemaining: number | null;
     };
     xAccount: {
       satisfied: boolean;

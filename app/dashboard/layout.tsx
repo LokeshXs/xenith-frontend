@@ -4,12 +4,13 @@ import { redirect } from 'next/navigation'
 
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { BackendStatusGate } from '@/components/backend-status-gate'
-import { BillingGraceBanner } from '@/components/billing/billing-grace-banner'
 import { checkBackendHealth } from '@/lib/services/health'
 import { fetchUserRequirementsStatus } from '@/lib/services/user-requirements'
 import { getSupabaseServerClient } from '@/lib/supabase/server-client'
 import { DashboardSidebar } from './components/DashboardSidebar'
 import { DashboardMobileHeader } from './components/DashboardMobileHeader'
+import { BillingAccessProvider } from './components/BillingAccessProvider'
+import { DashboardBillingBanner } from './components/DashboardBillingBanner'
 import { TwitterConnectGate } from './components/TwitterConnectGate'
 
 // Cascades to every /dashboard/* route: the app shell is private, so keep it
@@ -52,23 +53,22 @@ export default async function DashboardLayout({
   const defaultOpen = cookieStore.get('sidebar_state')?.value !== 'false'
 
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
-      <DashboardSidebar />
-      <SidebarInset>
-        <TwitterConnectGate />
-        <DashboardMobileHeader />
-        {/* The requirements payload already carries the subscription status and
-            grace end, so the banner costs no extra request. */}
-        <BillingGraceBanner
-          className="m-4 mb-0"
-          accessToken={session.access_token}
-          status={requirements.data.requirements.subscription.status}
-          accessExpiresAt={
-            requirements.data.requirements.subscription.accessExpiresAt
-          }
-        />
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+    <BillingAccessProvider
+      accessToken={session.access_token}
+      userId={session.user.id}
+      initialSubscription={requirements.data.requirements.subscription}
+    >
+      <SidebarProvider defaultOpen={defaultOpen}>
+        <DashboardSidebar />
+        <SidebarInset>
+          {requirements.data.requirements.subscription.hasAccess && (
+            <TwitterConnectGate />
+          )}
+          <DashboardMobileHeader />
+          <DashboardBillingBanner className="m-4 mb-0" />
+          {children}
+        </SidebarInset>
+      </SidebarProvider>
+    </BillingAccessProvider>
   )
 }

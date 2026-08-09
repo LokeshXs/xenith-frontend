@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { validateCurrentStep } from "../utils/formValidators";
 import { getErrorMessage } from "../utils/getErrorMessage";
 import { saveUserPreferences } from "@/lib/services/preferences";
+import { cn } from "@/lib/utils";
 import type { FormStep } from "../context/FormContext";
 import type { UserRequirementSteps } from "@/lib/services/user-requirements";
 
@@ -142,7 +143,12 @@ function MultistepFormContent({
       {/* Step content. The analyze step is an immersive, self-advancing moment,
           so it renders without the step-counter header or footer navigation.
           A shared min-height keeps the card from resizing between steps. */}
-      <Card className="min-h-[26rem] sm:min-h-[32rem] w-full ">
+      <Card
+        className={cn(
+          "min-h-[26rem] w-full sm:min-h-[32rem]",
+          currentStepId === "inspiration" && "overflow-visible",
+        )}
+      >
         {currentStepId !== "analyze-x" && (
           <CardHeader>
             <div className="text-xs text-muted-foreground font-medium text-center sm:text-left">

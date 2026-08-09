@@ -42,6 +42,7 @@ import {
   blockAccountFromReply,
   updateSuggestedReply,
 } from '@/lib/services/suggested-replies-client'
+import { useBillingAccess } from './BillingAccessProvider'
 
 const REPLY_MAX_LENGTH = 280
 
@@ -113,6 +114,7 @@ export function SuggestedReplyCard({
   xAccount: XAccount | null
   onUpdated: (reply: SuggestedReply) => void
 }) {
+  const { requirePaidAccess } = useBillingAccess()
   const authorName =
     reply.source_author_name ??
     (reply.source_author_username
@@ -154,11 +156,13 @@ export function SuggestedReplyCard({
   }
 
   const startEditing = () => {
+    if (!requirePaidAccess()) return
     setDraft(text)
     setIsEditing(true)
   }
 
   const handleSave = async () => {
+    if (!requirePaidAccess()) return
     const next = draft.trim()
     if (!next) {
       toast.error('Reply must not be empty')
@@ -187,13 +191,14 @@ export function SuggestedReplyCard({
       toast.success('Reply updated')
     } catch (error) {
       // 401 is handled globally by the apiClient interceptor.
-      console.error('Failed to update reply:', error)
       // Roll back the optimistic update and reopen the editor with the draft so
       // the user can fix it and retry.
       setText(prevText)
       setEdited(prevEdited)
       setDraft(next)
       setIsEditing(true)
+      if (isAxiosError(error) && error.response?.status === 402) return
+      console.error('Failed to update reply:', error)
       toast.error(getErrorMessage(error, 'Failed to update reply'))
     } finally {
       setIsSaving(false)
@@ -204,6 +209,10 @@ export function SuggestedReplyCard({
   // The card is intentionally kept visible after blocking (it drops off on the
   // next generation run); 401 is handled globally by the apiClient interceptor.
   const handleBlock = async () => {
+    if (!requirePaidAccess()) {
+      setConfirmBlockOpen(false)
+      return
+    }
     setIsBlocking(true)
     try {
       await blockAccountFromReply(reply.id)
@@ -215,7 +224,9 @@ export function SuggestedReplyCard({
       )
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined
-      if (code === 404) {
+      if (code === 402) {
+        return
+      } else if (code === 404) {
         toast.error('This reply no longer exists')
       } else if (code === 422) {
         toast.error('This suggestion has no account to block')
@@ -288,7 +299,9 @@ export function SuggestedReplyCard({
                   <DropdownMenuContent align="end" className="min-w-40">
                     <DropdownMenuItem
                       variant="destructive"
-                      onClick={() => setConfirmBlockOpen(true)}
+                      onClick={() => {
+                        if (requirePaidAccess()) setConfirmBlockOpen(true)
+                      }}
                     >
                       Block account
                     </DropdownMenuItem>

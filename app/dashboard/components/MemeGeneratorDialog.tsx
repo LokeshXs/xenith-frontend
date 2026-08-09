@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 import { IconCheck, IconDownload, IconPhoto, IconX } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -28,6 +29,7 @@ import { updatePostMeme } from "@/lib/services/posts-client";
 import type { GeneratedPost } from "@/lib/services/posts";
 import { cn } from "@/lib/utils";
 import { MemeCanvas, memeTemplateSrc } from "./MemeCanvas";
+import { useBillingAccess } from "./BillingAccessProvider";
 
 function sameCaptions(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
@@ -53,6 +55,7 @@ export function MemeGeneratorDialog({
   triggerRender?: React.ReactElement;
   triggerContent?: React.ReactNode;
 }) {
+  const { requirePaidAccess } = useBillingAccess();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [initial, setInitial] = useState<{
     templateId: string;
@@ -103,6 +106,7 @@ export function MemeGeneratorDialog({
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen && !requirePaidAccess()) return;
     if (nextOpen) initializeFromCurrent();
     setOpen(nextOpen);
   };
@@ -128,6 +132,7 @@ export function MemeGeneratorDialog({
   };
 
   const handleSave = async () => {
+    if (!requirePaidAccess()) return;
     const nextCaptions = fitCaptionsToTemplate(captions, selectedTemplate).map(
       (caption) => caption.trim(),
     );
@@ -147,6 +152,7 @@ export function MemeGeneratorDialog({
       toast.success("Meme saved");
       setOpen(false);
     } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 402) return;
       console.error("Failed to save meme:", error);
       toast.error("Failed to save meme");
     } finally {

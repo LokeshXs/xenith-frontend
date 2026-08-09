@@ -86,6 +86,7 @@ import { MemeCanvas } from "./MemeCanvas";
 import { MemeGeneratorDialog } from "./MemeGeneratorDialog";
 import { SignalBars } from "./SignalBars";
 import { useAiActions } from "./AiActionsContext";
+import { useBillingAccess } from "./BillingAccessProvider";
 import {
   type RewriteType,
   convertToMeme,
@@ -855,6 +856,7 @@ export function PostCard({
   xAccount: XAccount | null;
 }) {
   const { summary: aiActions, setSummary: setAiActions } = useAiActions();
+  const { subscription, requirePaidAccess } = useBillingAccess();
   const name = xAccount?.name ?? "Your X account";
   const initials = initialsFrom(name);
 
@@ -938,11 +940,13 @@ export function PostCard({
   // Default the calendar to today when the dialog opens with nothing picked, so
   // the user lands on a usable state matching the footer's date display.
   const handleScheduleOpenChange = (open: boolean) => {
+    if (open && !requirePaidAccess()) return;
     if (open && !pickedDate) setPickedDate(new Date());
     setScheduleOpen(open);
   };
 
   const handleModalScheduleOpenChange = (open: boolean) => {
+    if (open && !requirePaidAccess()) return;
     if (open && !pickedDate) setPickedDate(new Date());
     setModalScheduleOpen(open);
   };
@@ -983,6 +987,7 @@ export function PostCard({
   };
 
   const handlePublish = async () => {
+    if (!requirePaidAccess()) return;
     setIsPublishing(true);
     try {
       const updated = await publishPost(post.id);
@@ -992,6 +997,7 @@ export function PostCard({
       toast.success("Post published");
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 402) return;
       if (code === 403) {
         await reconnectForPosting();
         return;
@@ -1017,6 +1023,7 @@ export function PostCard({
   };
 
   const handleSchedule = async () => {
+    if (!requirePaidAccess()) return;
     if (!pickedDate) {
       toast.error("Pick a date");
       return;
@@ -1039,6 +1046,7 @@ export function PostCard({
       toast.success("Post scheduled");
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 402) return;
       if (code === 403) {
         await reconnectForPosting();
         return;
@@ -1093,6 +1101,7 @@ export function PostCard({
   };
 
   const startEditing = () => {
+    if (!requirePaidAccess()) return;
     setDraftContent(content);
     setDraftHashtags(hashtags.join(" "));
     setIsEditing(true);
@@ -1108,6 +1117,7 @@ export function PostCard({
   };
 
   const handleSave = async () => {
+    if (!requirePaidAccess()) return;
     const nextContent = draftContent.trim();
     const nextHashtags = draftHashtags
       .split(/\s+/)
@@ -1144,6 +1154,12 @@ export function PostCard({
       setScoreStale(updated.edited);
       toast.success("Post updated");
     } catch (error) {
+      if (isAxiosError(error) && error.response?.status === 402) {
+        setContent(content);
+        setHashtags(hashtags);
+        setIsEditing(true);
+        return;
+      }
       console.error("Failed to update post:", error);
       toast.error("Failed to update post");
     } finally {
@@ -1176,6 +1192,7 @@ export function PostCard({
   };
 
   const handleTransform = async (type: RewriteType) => {
+    if (!requirePaidAccess()) return;
     setTransformingTarget(type);
     try {
       const { post: updated, ai_actions: nextAiActions } = await rewritePost(
@@ -1188,6 +1205,7 @@ export function PostCard({
       toast.success(`Transformed to ${type} — re-score to update engagement`);
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 402) return;
       const errorCode = isAxiosError(error)
         ? (error.response?.data?.code as string | undefined)
         : undefined;
@@ -1213,6 +1231,7 @@ export function PostCard({
   };
 
   const handleConvertMeme = async () => {
+    if (!requirePaidAccess()) return;
     if (isMeme) return;
     setTransformingTarget("Meme");
     try {
@@ -1224,6 +1243,7 @@ export function PostCard({
       toast.success("Meme generated — use the edit button to customize it.");
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 402) return;
       const errorCode = isAxiosError(error)
         ? (error.response?.data?.code as string | undefined)
         : undefined;
@@ -1260,6 +1280,7 @@ export function PostCard({
   };
 
   const handleUndo = async () => {
+    if (!requirePaidAccess()) return;
     setIsUndoing(true);
     try {
       const updated = await undoPost(post.id);
@@ -1268,6 +1289,7 @@ export function PostCard({
       toast.success("Restored the original draft");
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 402) return;
       if (code === 409) {
         toast.error("Nothing to undo — this is the original draft.");
       } else {
@@ -1280,6 +1302,7 @@ export function PostCard({
   };
 
   const handleRescore = async () => {
+    if (!requirePaidAccess()) return;
     setIsRescoring(true);
     try {
       const { post: updated, ai_actions: nextAiActions } =
@@ -1290,6 +1313,7 @@ export function PostCard({
       toast.success("Engagement score updated");
     } catch (error) {
       const code = isAxiosError(error) ? error.response?.status : undefined;
+      if (code === 402) return;
       const errorCode = isAxiosError(error)
         ? (error.response?.data?.code as string | undefined)
         : undefined;
@@ -1707,7 +1731,9 @@ export function PostCard({
             <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
               <IconClock className="size-4 shrink-0" />
               <span className="truncate">
-                Scheduled for {formatScheduledAt(scheduledAt)}
+                {subscription.hasAccess
+                  ? `Scheduled for ${formatScheduledAt(scheduledAt)}`
+                  : `Paused · was scheduled for ${formatScheduledAt(scheduledAt)}`}
               </span>
             </span>
             <div className="flex shrink-0 items-center gap-2">

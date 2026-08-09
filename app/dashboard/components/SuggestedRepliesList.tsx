@@ -28,6 +28,7 @@ import {
 import { patchReplyInHistory } from '@/lib/services/suggested-replies-cache'
 import { formatDayLabel, todayKeyInTimezone } from '@/lib/utils/day-label'
 import { SuggestedReplyCard } from './SuggestedReplyCard'
+import { useBillingAccess } from './BillingAccessProvider'
 
 // Page 1 of the day-grouped history. The main view shows only the newest day.
 const LATEST_QUERY_KEY = ['suggested-replies', 'history', 1] as const
@@ -50,6 +51,7 @@ const isShortageNoticeDismissed = () =>
 
 export function SuggestedRepliesList() {
   const queryClient = useQueryClient()
+  const { requirePaidAccess } = useBillingAccess()
   const [generationNotice, setGenerationNotice] =
     useState<ReplyGenerationNotice | null>(null)
 
@@ -117,6 +119,7 @@ export function SuggestedRepliesList() {
   })
 
   const runGenerate = () => {
+    if (!requirePaidAccess()) return
     setGenerationNotice(null)
     generate.mutate()
   }

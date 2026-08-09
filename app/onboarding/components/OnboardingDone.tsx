@@ -38,8 +38,8 @@ export function OnboardingDone({
             </h2>
             <p className="text-muted-foreground">
               {deliveryTime
-                ? `Your first posts will be ready by ${formatTime(deliveryTime)} tomorrow.`
-                : 'Your workspace is ready and your subscription is active.'}
+                ? `Your posting schedule is set for ${formatTime(deliveryTime)} once Creator access is active.`
+                : 'Your workspace setup is complete.'}
             </p>
            
           </div>

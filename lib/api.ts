@@ -6,6 +6,8 @@ export const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+export const SUBSCRIPTION_REQUIRED_EVENT = 'xenith:subscription-required'
+
 // Attach JWT to every request
 apiClient.interceptors.request.use(async (config) => {
   const token = await getAccessToken()
@@ -24,6 +26,13 @@ apiClient.interceptors.response.use(
       if (typeof window !== 'undefined') {
         window.location.href = '/login'
       }
+    }
+    if (
+      error.response?.status === 402 &&
+      error.response?.data?.code === 'SUBSCRIPTION_REQUIRED' &&
+      typeof window !== 'undefined'
+    ) {
+      window.dispatchEvent(new Event(SUBSCRIPTION_REQUIRED_EVENT))
     }
     return Promise.reject(error)
   }

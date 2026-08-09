@@ -17,6 +17,7 @@ import { fetchPostsTodayClient } from '@/lib/services/posts-client'
 import { PostCard } from './PostCard'
 import { PostCardSkeleton } from './PostCardSkeleton'
 import { AiActionsProvider, useAiActions } from './AiActionsContext'
+import { useBillingAccess } from './BillingAccessProvider'
 
 const ERROR_REASON_MAP: Record<string, string> = {
   access_denied: 'You declined to authorize the X connection.',
@@ -41,6 +42,7 @@ function DashboardClientContent({
   xAccount,
 }: Omit<DashboardClientProps, 'initialAiActions'>) {
   const { setSummary: setAiActions } = useAiActions()
+  const { subscription, requirePaidAccess } = useBillingAccess()
   const searchParams = useSearchParams()
   const twitterParam = searchParams.get('twitter')
   const reasonParam = searchParams.get('reason')
@@ -84,7 +86,7 @@ function DashboardClientContent({
   }, [posts, sortBy])
 
   const nextDraftsLabel =
-    posts.length > 0
+    subscription.hasAccess && posts.length > 0
       ? deliveryTime
         ? `Next drafts tomorrow at ${formatTime12(deliveryTime)}`
         : 'Next drafts are scheduled soon'
@@ -93,6 +95,7 @@ function DashboardClientContent({
   const anyScored = posts.some((p) => p.engagement_score !== null)
 
   async function handleGenerate() {
+    if (!requirePaidAccess()) return
     setIsGenerating(true)
     try {
       // POST /posts/generate is synchronous and slow — it runs the whole
@@ -110,7 +113,10 @@ function DashboardClientContent({
         ? (err.response?.data?.error as string | undefined)
         : undefined
 
-      if (status === 409) {
+      if (status === 402) {
+        // The global API interceptor opens the shared billing modal.
+        return
+      } else if (status === 409) {
         // Already generated today (auto or manual) — not an error. Load today's
         // posts and surface them.
         try {
@@ -122,7 +128,7 @@ function DashboardClientContent({
           toast.error('Failed to load today’s posts. Please refresh.')
         }
       } else if (
-        (status === 400 || status === 402 || status === 500) &&
+        (status === 400 || status === 500) &&
         apiMessage
       ) {
         toast.error(apiMessage)
@@ -215,7 +221,9 @@ function DashboardClientContent({
         ) : (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-8 text-center">
             <p className="text-muted-foreground text-sm">
-              {deliveryTime
+              {!subscription.hasAccess
+                ? 'No posts were generated today. Your previous posts remain available in All posts.'
+                : deliveryTime
                 ? `Your posts will be ready at ${formatTime12(deliveryTime)}.`
                 : 'No posts yet today — your posts will be ready soon.'}
             </p>

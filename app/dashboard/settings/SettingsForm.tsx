@@ -6,6 +6,7 @@ import {
   IconCheck,
   IconCreditCard,
   IconLoader2,
+  IconLock,
 } from '@tabler/icons-react'
 
 import { toast } from 'sonner'
@@ -47,6 +48,7 @@ import {
 import { isAxiosError } from 'axios'
 import { CREATOR_PLAN_LIMITS } from '@/lib/plan-limits'
 import { useAuth } from '@/context/AuthContext'
+import { useBillingAccess } from '../components/BillingAccessProvider'
 
 const POSTS_PER_DAY_OPTIONS = Array.from(
   { length: CREATOR_PLAN_LIMITS.maxPostsPerDay },
@@ -89,16 +91,47 @@ type SectionProps = {
   title: string
   description: string
   children: React.ReactNode
+  locked?: boolean
+  onLockedAction?: () => void
 }
 
-function Section({ title, description, children }: SectionProps) {
+function Section({
+  title,
+  description,
+  children,
+  locked = false,
+  onLockedAction,
+}: SectionProps) {
   return (
     <section className="grid gap-6 py-8 md:grid-cols-[minmax(0,16rem)_minmax(0,1fr)] md:gap-12">
       <div className="flex flex-col gap-1">
         <h2 className="text-base font-medium tracking-tight">{title}</h2>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="flex flex-col gap-4">{children}</div>
+      <div className="relative rounded-xl">
+        <fieldset
+          disabled={locked}
+          className={cn(
+            'm-0 flex min-w-0 flex-col gap-4 border-0 p-0 transition-opacity',
+            locked && 'pointer-events-none opacity-55',
+          )}
+        >
+          {children}
+        </fieldset>
+        {locked && (
+          <button
+            type="button"
+            onClick={onLockedAction}
+            aria-label={`Activate Creator to edit ${title}`}
+            className="absolute inset-0 rounded-xl outline-none focus-visible:ring-3 focus-visible:ring-ring/30"
+          >
+            <span className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-full border border-border bg-background/90 px-2 py-1 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur-sm">
+              <IconLock className="size-3" />
+              Creator required
+            </span>
+          </button>
+        )}
+      </div>
     </section>
   )
 }
@@ -237,6 +270,7 @@ export function SettingsForm({
   billingStatus,
 }: SettingsFormProps) {
   const { session } = useAuth()
+  const { subscription, requirePaidAccess, openBillingModal } = useBillingAccess()
   const [prefs, setPrefs] = useState<UserPreferences>(initialPreferences)
   const [billing, setBilling] = useState<BillingStatus | null>(billingStatus)
   // Baseline we diff against for the dirty state. Re-set after a successful
@@ -286,6 +320,7 @@ export function SettingsForm({
   }
 
   const handleSave = async () => {
+    if (!requirePaidAccess()) return
     // Match the API's minimum rule client-side so the user gets
     // immediate feedback without a round-trip.
     if (prefs.niche.filter((n) => n.trim()).length < minNiches) {
@@ -347,7 +382,9 @@ export function SettingsForm({
       if (isAxiosError(err)) {
         const status = err.response?.status
         const apiMessage = err.response?.data?.error as string | undefined
-        if (status === 404) {
+        if (status === 402) {
+          return
+        } else if (status === 404) {
           setSaveError('No saved preferences yet — finish onboarding first.')
         } else if (apiMessage && [400, 409, 422, 429, 503].includes(status ?? 0)) {
           setSaveError(apiMessage)
@@ -519,6 +556,8 @@ export function SettingsForm({
         <Section
           title="Niche"
           description={`Choose ${minNiches} to ${maxNiches} topics we'll source trends and ideas from.`}
+          locked={!subscription.hasAccess}
+          onLockedAction={openBillingModal}
         >
           {suggestedNiches.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -546,6 +585,8 @@ export function SettingsForm({
         <Section
           title="Inspiration"
           description={`Search for and select ${minInspirationAccounts} to ${maxInspirationAccounts} public X accounts we'll learn voice and style from.`}
+          locked={!subscription.hasAccess}
+          onLockedAction={openBillingModal}
         >
           <div className="flex flex-col gap-3">
             <InspirationAccountPicker
@@ -567,6 +608,8 @@ export function SettingsForm({
         <Section
           title="Delivery"
           description="How many drafts you get, and when."
+          locked={!subscription.hasAccess}
+          onLockedAction={openBillingModal}
         >
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-2">
@@ -606,6 +649,8 @@ export function SettingsForm({
         <Section
           title="Suggested replies"
           description="How many reply suggestions we generate each run."
+          locked={!subscription.hasAccess}
+          onLockedAction={openBillingModal}
         >
           <div className="flex flex-col gap-2 sm:max-w-xs">
             <Label htmlFor="reply-count">Replies per run</Label>
