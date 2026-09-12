@@ -63,6 +63,7 @@ export default function RootLayout({
       )}
     >
       <head>
+        <meta name="ihc-verify" content="b649a7ca40314e27a92eecbc09f39802" />
         <Script
           defer
           src="https://cloud.umami.is/script.js"
